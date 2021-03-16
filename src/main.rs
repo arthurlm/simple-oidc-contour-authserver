@@ -50,9 +50,26 @@ pub mod xds {
     }
 }
 
+pub mod checkers;
+
+use tonic::transport::Server;
+
+use crate::envoy::service::auth::v2::authorization_server::AuthorizationServer as AuthorizationServerV2;
+use crate::envoy::service::auth::v3::authorization_server::AuthorizationServer as AuthorizationServerV3;
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
+
+    let addr = "0.0.0.0:50051".parse()?;
+    let auth_v2 = checkers::v2::AuthorizationV2::default();
+    let auth_v3 = checkers::v3::AuthorizationV3::default();
+
+    Server::builder()
+        .add_service(AuthorizationServerV2::new(auth_v2))
+        .add_service(AuthorizationServerV3::new(auth_v3))
+        .serve(addr)
+        .await?;
 
     Ok(())
 }
