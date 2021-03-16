@@ -7,3 +7,6 @@
 [submodule "proto/envoy"]
 	path = proto/envoy
 	url = https://github.com/envoyproxy/envoy.git
+[submodule "proto/udpa"]
+	path = proto/udpa
+	url = https://github.com/cncf/udpa.git
