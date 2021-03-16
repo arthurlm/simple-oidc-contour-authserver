@@ -4,3 +4,6 @@
 [submodule "proto/googleapis"]
 	path = proto/googleapis
 	url = https://github.com/googleapis/googleapis
+[submodule "proto/envoy"]
+	path = proto/envoy
+	url = https://github.com/envoyproxy/envoy.git
