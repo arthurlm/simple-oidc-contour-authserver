@@ -144,9 +144,148 @@ impl<'a> TokenValidator for AuthenticationService<'a> {
         let key = keys.get(&kid).ok_or(TokenError::InvalidKid)?;
 
         // Decode and check token
-        let payload = jsonwebtoken::decode(token, key, &self.validation)
-            .map_err(|_e| TokenError::InvalidToken)?;
+        let payload = jsonwebtoken::decode(token, key, &self.validation).map_err(|e| {
+            log::warn!("Token validation failed: {:?}", e);
+            TokenError::InvalidToken
+        })?;
 
         Ok(payload.claims)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    static TOKEN_SECRET: &[u8] = &[4, 8, 15, 16, 23, 42];
+
+    macro_rules! config {
+        () => {
+            AuthenticationServiceConfig {
+                jwk_url: "https://login.microsoftonline.com/common/discovery/v2.0/keys".into(),
+            }
+        };
+    }
+
+    #[test]
+    fn test_new_does_not_panic() {
+        let config = config!();
+        let validation: ValidationConfig = serde_json::from_str("{}").unwrap();
+        AuthenticationService::new(config, validation.into());
+    }
+
+    macro_rules! auth {
+        () => {{
+            let config = config!();
+            let validation = Validation {
+                validate_exp: false,
+                ..Default::default()
+            };
+            AuthenticationService::new(config, validation.into())
+        }};
+    }
+
+    #[tokio::test]
+    async fn test_refresh_token() {
+        let auth = auth!();
+        assert_eq!(auth.keys.read().unwrap().len(), 0);
+
+        auth.refresh_token().await.unwrap();
+        assert_ne!(auth.keys.read().unwrap().len(), 0);
+    }
+
+    macro_rules! token {
+        () => {
+            token!(
+                json!({"typ": "JWT", "alg": "HS256", "kid": "test"}),
+                json!({"sub": "Arthur"})
+            )
+        };
+        ($header:expr, $payload:expr) => {{
+            use jsonwebtoken::{crypto::sign, EncodingKey};
+
+            let message = format!(
+                "{}.{}",
+                base64::encode(serde_json::to_string(&$header).unwrap()),
+                base64::encode(serde_json::to_string(&$payload).unwrap())
+            );
+            let key = EncodingKey::from_secret(TOKEN_SECRET);
+            let signature = sign(&message, &key, Algorithm::HS256).unwrap();
+
+            format!("{}.{}", message, signature)
+        }};
+    }
+
+    #[tokio::test]
+    async fn test_no_headers() {
+        let auth = auth!();
+        assert_eq!(auth.validate("").await, Err(TokenError::InvalidHeader));
+        assert_eq!(auth.validate("foo").await, Err(TokenError::InvalidHeader));
+        assert_eq!(
+            auth.validate(".foo.bar").await,
+            Err(TokenError::InvalidHeader)
+        );
+        assert_eq!(
+            auth.validate("baz.foo.bar").await,
+            Err(TokenError::InvalidHeader)
+        );
+    }
+
+    #[tokio::test]
+    async fn test_no_kid() {
+        let token = token!(
+            json!({
+                "typ": "JWT",
+                "alg": "HS256",
+            }),
+            json!({})
+        );
+
+        let auth = auth!();
+        assert_eq!(auth.validate(&token).await, Err(TokenError::MissingKid));
+    }
+
+    #[tokio::test]
+    async fn test_trigger_refresh() {
+        let auth = auth!();
+        assert_eq!(auth.keys.read().unwrap().len(), 0);
+
+        let token = token!();
+        let _ = auth.validate(&token).await;
+        assert_ne!(auth.keys.read().unwrap().len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_invalid_signature() {
+        let auth = auth!();
+        auth.keys
+            .write()
+            .unwrap()
+            .insert("test".into(), DecodingKey::from_secret(&[10, 31]));
+        assert_eq!(auth.keys.read().unwrap().len(), 1);
+
+        let token = token!();
+        assert_eq!(auth.validate(&token).await, Err(TokenError::InvalidToken));
+        assert_eq!(auth.keys.read().unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_valid_signature() {
+        let auth = auth!();
+        auth.keys
+            .write()
+            .unwrap()
+            .insert("test".into(), DecodingKey::from_secret(TOKEN_SECRET));
+        assert_eq!(auth.keys.read().unwrap().len(), 1);
+
+        let token = token!();
+        assert_eq!(
+            auth.validate(&token).await,
+            Ok(TokenContent {
+                sub: "Arthur".to_string()
+            })
+        );
+        assert_eq!(auth.keys.read().unwrap().len(), 1);
     }
 }

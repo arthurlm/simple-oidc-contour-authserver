@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use serde::Deserialize;
 use thiserror::Error;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq)]
 pub enum TokenError {
     #[error("missing JWT header")]
     InvalidHeader,
@@ -17,9 +17,9 @@ pub enum TokenError {
     InvalidToken,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub struct TokenContent {
-    sub: String,
+    pub sub: String,
 }
 
 #[async_trait]
