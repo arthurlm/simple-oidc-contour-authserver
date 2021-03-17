@@ -1,10 +1,13 @@
 use async_trait::async_trait;
+use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
 use crate::envoy::config::core::v3::{HeaderValue, HeaderValueOption};
 use crate::envoy::service::auth::v3::authorization_server::Authorization;
 use crate::envoy::service::auth::v3::check_response::HttpResponse;
 use crate::envoy::service::auth::v3::{CheckRequest, CheckResponse, OkHttpResponse};
+
+use crate::token_validation::*;
 
 pub fn build_http_header(key: &str, value: &str) -> HeaderValueOption {
     HeaderValueOption {
@@ -16,11 +19,28 @@ pub fn build_http_header(key: &str, value: &str) -> HeaderValueOption {
     }
 }
 
-#[derive(Debug, Default)]
-pub struct AuthorizationV3 {}
+#[derive(Debug)]
+pub struct AuthorizationV3<T>
+where
+    T: TokenValidator + Send + Sync + 'static,
+{
+    validator: Arc<T>,
+}
+
+impl<T> AuthorizationV3<T>
+where
+    T: TokenValidator + Send + Sync + 'static,
+{
+    pub fn new(validator: Arc<T>) -> Self {
+        Self { validator }
+    }
+}
 
 #[async_trait]
-impl Authorization for AuthorizationV3 {
+impl<T> Authorization for AuthorizationV3<T>
+where
+    T: TokenValidator + Send + Sync + 'static,
+{
     async fn check(
         &self,
         request: Request<CheckRequest>,
