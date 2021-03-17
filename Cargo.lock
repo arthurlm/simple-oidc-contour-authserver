@@ -975,6 +975,7 @@ dependencies = [
  "base64 0.13.0",
  "env_logger",
  "envy",
+ "http",
  "jsonwebtoken",
  "log",
  "prost",
