@@ -4,6 +4,9 @@ use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq)]
 pub enum TokenError {
+    #[error("missing HTTP attribute")]
+    MissingHttpAttribute,
+
     #[error("missing JWT header")]
     InvalidHeader,
 
