@@ -5,10 +5,10 @@ authors = ["Arthur LE MOIGNE <me@alemoigne.fr>"]
 edition = "2018"
 
 [dependencies]
-tonic = "0.4"
+tonic = { version = "0.4", features = ["tls"]}
 prost = "0.7"
 prost-types = "0.7"
-tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.0", features = ["macros", "rt-multi-thread", "fs"] }
 env_logger = "0.8"
 anyhow = "1.0"
 thiserror = "1.0"
@@ -20,6 +20,8 @@ envy = "0.4"
 jsonwebtoken = "7.2"
 reqwest = { version  = "0.11", features = ["json"] }
 http = "0.2"
+clap = "3.0.0-beta.2"
+futures = "0.3.12"
 
 [build-dependencies]
 tonic-build = "0.4"
