@@ -50,7 +50,9 @@ pub mod xds {
     }
 }
 
-pub mod checkers;
+mod auth;
+mod checkers;
+mod token_validation;
 
 use tonic::transport::Server;
 
@@ -60,6 +62,8 @@ use crate::envoy::service::auth::v3::authorization_server::AuthorizationServer a
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
+
+    let auth_service = auth::AuthenticationService::from_env().unwrap();
 
     let addr = "0.0.0.0:50051".parse()?;
     let auth_v2 = checkers::v2::AuthorizationV2::default();
