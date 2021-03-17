@@ -50,8 +50,11 @@ pub mod xds {
     }
 }
 
-pub mod checkers;
+mod auth;
+mod checkers;
+mod token_validation;
 
+use std::sync::Arc;
 use tonic::transport::Server;
 
 use crate::envoy::service::auth::v2::authorization_server::AuthorizationServer as AuthorizationServerV2;
@@ -61,9 +64,11 @@ use crate::envoy::service::auth::v3::authorization_server::AuthorizationServer a
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
 
+    let auth_service = Arc::new(auth::AuthenticationService::from_env().unwrap());
+
     let addr = "0.0.0.0:50051".parse()?;
-    let auth_v2 = checkers::v2::AuthorizationV2::default();
-    let auth_v3 = checkers::v3::AuthorizationV3::default();
+    let auth_v2 = checkers::v2::AuthorizationV2::new(auth_service.clone());
+    let auth_v3 = checkers::v3::AuthorizationV3::new(auth_service);
 
     log::info!("gRPC server will listen at: {:?}", addr);
     Server::builder()
