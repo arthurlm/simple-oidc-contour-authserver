@@ -11,8 +11,9 @@ pub struct AuthorizationV3 {}
 impl Authorization for AuthorizationV3 {
     async fn check(
         &self,
-        _request: Request<CheckRequest>,
+        request: Request<CheckRequest>,
     ) -> Result<Response<CheckResponse>, Status> {
+        log::info!("Processing v2 request: {:?}", request);
         unimplemented!();
     }
 }

@@ -65,6 +65,7 @@ async fn main() -> anyhow::Result<()> {
     let auth_v2 = checkers::v2::AuthorizationV2::default();
     let auth_v3 = checkers::v3::AuthorizationV3::default();
 
+    log::info!("gRPC server will listen at: {:?}", addr);
     Server::builder()
         .add_service(AuthorizationServerV2::new(auth_v2))
         .add_service(AuthorizationServerV3::new(auth_v3))

@@ -12,6 +12,7 @@ tokio = { version = "1.0", features = ["macros", "rt-multi-thread"] }
 env_logger = "0.8"
 anyhow = "1.0"
 async-trait = "0.1.42"
+log = "0.4"
 
 [build-dependencies]
 tonic-build = "0.4"

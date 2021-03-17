@@ -582,6 +582,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "env_logger",
+ "log",
  "prost",
  "prost-types",
  "tokio",
