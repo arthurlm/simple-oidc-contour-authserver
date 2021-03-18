@@ -80,7 +80,9 @@ where
                 ..Default::default()
             }),
             Err(e) => HttpResponse::DeniedResponse(DeniedHttpResponse {
-                status: Some(HttpStatus { code: 401 }), // Unauthorized
+                status: Some(HttpStatus {
+                    code: http::status::StatusCode::UNAUTHORIZED.as_u16() as i32,
+                }),
                 headers: vec![build_http_header(
                     http::header::WWW_AUTHENTICATE.as_str(),
                     "Bearer",
