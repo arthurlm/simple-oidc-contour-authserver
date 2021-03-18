@@ -7,6 +7,9 @@ pub enum TokenError {
     #[error("missing HTTP attribute")]
     MissingHttpAttribute,
 
+    #[error("missing Authorization HTTP header")]
+    MissingAuthorizationHeader,
+
     #[error("invalid authentication type")]
     InvalidAuthenticationType,
 

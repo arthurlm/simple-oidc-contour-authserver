@@ -30,13 +30,19 @@ fn extract_http_headers(check_request: CheckRequest) -> Option<HashMap<String, S
     Some(req_http.headers)
 }
 
-async fn process_request(check_request: CheckRequest) -> Result<TokenContent, TokenError> {
-    // TODO
-    let _headers = extract_http_headers(check_request).ok_or(TokenError::MissingHttpAttribute)?;
+async fn process_request<T>(
+    validator: &Arc<T>,
+    check_request: CheckRequest,
+) -> Result<TokenContent, TokenError>
+where
+    T: TokenValidator + Send + Sync + 'static,
+{
+    let headers = extract_http_headers(check_request).ok_or(TokenError::MissingHttpAttribute)?;
+    let authorization = headers
+        .get("Authorization")
+        .ok_or(TokenError::MissingAuthorizationHeader)?;
 
-    Ok(TokenContent {
-        sub: "User1".into(),
-    })
+    validator.validate(authorization).await
 }
 
 #[derive(Debug)]
@@ -67,7 +73,7 @@ where
     ) -> Result<Response<CheckResponse>, Status> {
         log::info!("Processing v3 request: {:?}", request);
 
-        let http_response = match process_request(request.into_inner()).await {
+        let http_response = match process_request(&self.validator, request.into_inner()).await {
             Ok(user_data) => HttpResponse::OkResponse(OkHttpResponse {
                 headers: vec![build_http_header("Auth-Username", &user_data.sub)],
                 headers_to_remove: vec!["Authorization".to_string()],
