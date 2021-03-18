@@ -75,7 +75,7 @@ where
         log::debug!("Processing v3 request: {:?}", request);
 
         let response = process_request(&self.validator, request.into_inner()).await;
-        log::debug!("Auth v3 response: {:?}", response);
+        log::info!("Auth v3 response: {:?}", response);
 
         Ok(Response::new(match response {
             Ok(user_data) => CheckResponse {
