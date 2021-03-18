@@ -64,7 +64,7 @@ use crate::envoy::service::auth::v2::authorization_server::AuthorizationServer a
 use crate::envoy::service::auth::v3::authorization_server::AuthorizationServer as AuthorizationServerV3;
 
 #[derive(Clap)]
-#[clap(version = "1.0", author = "Kevin K. <kbknapp@gmail.com>")]
+#[clap(version = "1.0", author = "Arthur LE MOIGNE. <me@alemoigne.com>")]
 struct Opts {
     /// Addr to bind on
     #[clap(short, long, default_value = "0.0.0.0:50051")]
