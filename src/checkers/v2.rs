@@ -71,7 +71,7 @@ where
         &self,
         request: Request<CheckRequest>,
     ) -> Result<Response<CheckResponse>, Status> {
-        log::info!("Processing v2 request: {:?}", request);
+        log::debug!("Processing v2 request: {:?}", request);
 
         let http_response = match process_request(&self.validator, request.into_inner()).await {
             Ok(user_data) => HttpResponse::OkResponse(OkHttpResponse {
@@ -86,6 +86,8 @@ where
                 body: format!("Error: {}", e),
             }),
         };
+
+        log::debug!("Auth v2 response: {:?}", http_response);
 
         Ok(Response::new(CheckResponse {
             http_response: Some(http_response),

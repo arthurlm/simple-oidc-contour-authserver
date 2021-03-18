@@ -91,6 +91,12 @@ impl<'a> From<JwkItem> for DecodingKey<'a> {
 
 impl<'a> AuthenticationService<'a> {
     pub fn new(config: AuthenticationServiceConfig, validation: Validation) -> Self {
+        log::info!(
+            "Auth service config: {:?}, validation: {:?}",
+            config,
+            validation,
+        );
+
         let keys = RwLock::new(HashMap::new());
         let client = reqwest::Client::new();
         Self {
