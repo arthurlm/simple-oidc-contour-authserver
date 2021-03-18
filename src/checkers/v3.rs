@@ -12,7 +12,7 @@ use crate::envoy::service::auth::v3::{
 };
 use crate::google::rpc;
 
-use crate::token_validation::*;
+use crate::authentication::*;
 
 pub fn build_http_header(key: &str, value: &str) -> HeaderValueOption {
     HeaderValueOption {
@@ -34,14 +34,14 @@ fn extract_http_headers(check_request: CheckRequest) -> Option<HashMap<String, S
 async fn process_request<T>(
     validator: &Arc<T>,
     check_request: CheckRequest,
-) -> Result<TokenContent, TokenError>
+) -> Result<AuthContent, AuthError>
 where
-    T: TokenValidator + Send + Sync + 'static,
+    T: AuthValidator + Send + Sync + 'static,
 {
-    let headers = extract_http_headers(check_request).ok_or(TokenError::MissingHttpAttribute)?;
+    let headers = extract_http_headers(check_request).ok_or(AuthError::MissingHttpAttribute)?;
     let authorization = headers
         .get(http::header::AUTHORIZATION.as_str())
-        .ok_or(TokenError::MissingAuthorizationHeader)?;
+        .ok_or(AuthError::MissingAuthorizationHeader)?;
 
     validator.validate(authorization).await
 }
@@ -49,14 +49,14 @@ where
 #[derive(Debug)]
 pub struct AuthorizationV3<T>
 where
-    T: TokenValidator + Send + Sync + 'static,
+    T: AuthValidator + Send + Sync + 'static,
 {
     validator: Arc<T>,
 }
 
 impl<T> AuthorizationV3<T>
 where
-    T: TokenValidator + Send + Sync + 'static,
+    T: AuthValidator + Send + Sync + 'static,
 {
     pub fn new(validator: Arc<T>) -> Self {
         Self { validator }
@@ -66,7 +66,7 @@ where
 #[async_trait]
 impl<T> Authorization for AuthorizationV3<T>
 where
-    T: TokenValidator + Send + Sync + 'static,
+    T: AuthValidator + Send + Sync + 'static,
 {
     async fn check(
         &self,

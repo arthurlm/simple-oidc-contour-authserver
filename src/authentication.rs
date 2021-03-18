@@ -3,7 +3,7 @@ use serde::Deserialize;
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq)]
-pub enum TokenError {
+pub enum AuthError {
     #[error("missing HTTP attribute")]
     MissingHttpAttribute,
 
@@ -30,7 +30,7 @@ pub enum TokenError {
 }
 
 #[derive(Debug, Deserialize, PartialEq)]
-pub struct TokenContent {
+pub struct AuthContent {
     pub sub: String,
 
     #[serde(default)]
@@ -41,6 +41,6 @@ pub struct TokenContent {
 }
 
 #[async_trait]
-pub trait TokenValidator {
-    async fn validate(&self, authorization: &str) -> Result<TokenContent, TokenError>;
+pub trait AuthValidator {
+    async fn validate(&self, authorization: &str) -> Result<AuthContent, AuthError>;
 }

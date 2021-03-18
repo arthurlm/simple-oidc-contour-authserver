@@ -5,8 +5,8 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 use std::time::Duration;
 
+use crate::authentication::*;
 use crate::helpers::read_auth_param;
-use crate::token_validation::*;
 
 static KEY_REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -48,7 +48,7 @@ impl Into<Validation> for ValidationConfig {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct AuthenticationServiceConfig {
+pub struct BearerAuthConfig {
     /// JWK url to get public key
     /// Exemple: https://login.microsoftonline.com/common/discovery/v2.0/keys
     /// You can easily found this in '.well-known' configs
@@ -56,9 +56,9 @@ pub struct AuthenticationServiceConfig {
 }
 
 #[derive(Debug)]
-pub struct AuthenticationService<'a> {
+pub struct BearerAuth<'a> {
     /// Service configuration
-    config: AuthenticationServiceConfig,
+    config: BearerAuthConfig,
 
     /// Validation object to match token with
     validation: Validation,
@@ -89,10 +89,10 @@ impl<'a> From<JwkItem> for DecodingKey<'a> {
     }
 }
 
-impl<'a> AuthenticationService<'a> {
-    pub fn new(config: AuthenticationServiceConfig, validation: Validation) -> Self {
+impl<'a> BearerAuth<'a> {
+    pub fn new(config: BearerAuthConfig, validation: Validation) -> Self {
         log::info!(
-            "Auth service config: {:?}, validation: {:?}",
+            "bearer auth config: {:?}, validation: {:?}",
             config,
             validation,
         );
@@ -134,12 +134,12 @@ impl<'a> AuthenticationService<'a> {
 }
 
 #[async_trait]
-impl<'a> TokenValidator for AuthenticationService<'a> {
-    async fn validate(&self, authorization: &str) -> Result<TokenContent, TokenError> {
+impl<'a> AuthValidator for BearerAuth<'a> {
+    async fn validate(&self, authorization: &str) -> Result<AuthContent, AuthError> {
         let token = read_auth_param("Bearer", authorization)?;
 
-        let header = jsonwebtoken::decode_header(token).map_err(|_e| TokenError::InvalidHeader)?;
-        let kid = header.kid.ok_or(TokenError::MissingKid)?;
+        let header = jsonwebtoken::decode_header(token).map_err(|_e| AuthError::InvalidHeader)?;
+        let kid = header.kid.ok_or(AuthError::MissingKid)?;
 
         // Check if kid is in cache and refresh keys if not
         if !self.keys.read().unwrap().contains_key(&kid) {
@@ -150,12 +150,12 @@ impl<'a> TokenValidator for AuthenticationService<'a> {
 
         // Get key from cache
         let keys = self.keys.read().unwrap();
-        let key = keys.get(&kid).ok_or(TokenError::InvalidKid)?;
+        let key = keys.get(&kid).ok_or(AuthError::InvalidKid)?;
 
         // Decode and check token
         let payload = jsonwebtoken::decode(token, key, &self.validation).map_err(|e| {
             log::warn!("Token validation failed: {:?}", e);
-            TokenError::InvalidToken
+            AuthError::InvalidToken
         })?;
 
         Ok(payload.claims)
@@ -171,7 +171,7 @@ mod tests {
 
     macro_rules! config {
         () => {
-            AuthenticationServiceConfig {
+            BearerAuthConfig {
                 jwk_url: "https://login.microsoftonline.com/common/discovery/v2.0/keys".into(),
             }
         };
@@ -181,7 +181,7 @@ mod tests {
     fn test_new_does_not_panic() {
         let config = config!();
         let validation: ValidationConfig = serde_json::from_str("{}").unwrap();
-        AuthenticationService::new(config, validation.into());
+        BearerAuth::new(config, validation.into());
     }
 
     macro_rules! auth {
@@ -191,7 +191,7 @@ mod tests {
                 validate_exp: false,
                 ..Default::default()
             };
-            AuthenticationService::new(config, validation.into())
+            BearerAuth::new(config, validation.into())
         }};
     }
 
@@ -231,15 +231,15 @@ mod tests {
         let auth = auth!();
         assert_eq!(
             auth.validate("Bearer foo").await,
-            Err(TokenError::InvalidHeader)
+            Err(AuthError::InvalidHeader)
         );
         assert_eq!(
             auth.validate("Bearer .foo.bar").await,
-            Err(TokenError::InvalidHeader)
+            Err(AuthError::InvalidHeader)
         );
         assert_eq!(
             auth.validate("Bearer baz.foo.bar").await,
-            Err(TokenError::InvalidHeader)
+            Err(AuthError::InvalidHeader)
         );
     }
 
@@ -254,7 +254,7 @@ mod tests {
         );
 
         let auth = auth!();
-        assert_eq!(auth.validate(&token).await, Err(TokenError::MissingKid));
+        assert_eq!(auth.validate(&token).await, Err(AuthError::MissingKid));
     }
 
     #[tokio::test]
@@ -277,7 +277,7 @@ mod tests {
         assert_eq!(auth.keys.read().unwrap().len(), 1);
 
         let token = token!();
-        assert_eq!(auth.validate(&token).await, Err(TokenError::InvalidToken));
+        assert_eq!(auth.validate(&token).await, Err(AuthError::InvalidToken));
         assert_eq!(auth.keys.read().unwrap().len(), 1);
     }
 
@@ -293,7 +293,7 @@ mod tests {
         let token = token!();
         assert_eq!(
             auth.validate(&token).await,
-            Ok(TokenContent {
+            Ok(AuthContent {
                 sub: "Arthur".to_string(),
                 email: None,
                 name: None,
@@ -307,11 +307,11 @@ mod tests {
         let auth = auth!();
         assert_eq!(
             auth.validate("").await,
-            Err(TokenError::MissingAuthenticationParam)
+            Err(AuthError::MissingAuthenticationParam)
         );
         assert_eq!(
             auth.validate("   ").await,
-            Err(TokenError::MissingAuthenticationParam)
+            Err(AuthError::MissingAuthenticationParam)
         );
     }
 
@@ -320,7 +320,7 @@ mod tests {
         let auth = auth!();
         assert_eq!(
             auth.validate("Basic    YWxhZGRpbjpvcGVuc2VzYW1l").await,
-            Err(TokenError::InvalidAuthenticationType)
+            Err(AuthError::InvalidAuthenticationType)
         );
     }
 }

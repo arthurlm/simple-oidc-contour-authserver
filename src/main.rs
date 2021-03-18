@@ -50,10 +50,10 @@ pub mod xds {
     }
 }
 
-mod auth;
+mod auth_bearer;
+mod authentication;
 mod checkers;
 mod helpers;
-mod token_validation;
 
 use clap::Clap;
 use futures::try_join;
@@ -96,11 +96,11 @@ async fn main() -> anyhow::Result<()> {
     let identity = Identity::from_pem(cert, key);
 
     // Create auth services
-    let auth_service = Arc::new(auth::AuthenticationService::from_env()?);
-    let _ = auth_service.refresh_token().await;
+    let bearer_service = Arc::new(auth_bearer::BearerAuth::from_env()?);
+    let _ = bearer_service.refresh_token().await;
 
-    let auth_v2 = checkers::v2::AuthorizationV2::new(auth_service.clone());
-    let auth_v3 = checkers::v3::AuthorizationV3::new(auth_service);
+    let auth_v2 = checkers::v2::AuthorizationV2::new(bearer_service.clone());
+    let auth_v3 = checkers::v3::AuthorizationV3::new(bearer_service);
 
     log::info!("gRPC server will listen at: {:?}", addr);
     Server::builder()
