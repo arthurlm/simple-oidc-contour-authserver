@@ -10,6 +10,7 @@ use crate::envoy::service::auth::v3::check_response::HttpResponse;
 use crate::envoy::service::auth::v3::{
     CheckRequest, CheckResponse, DeniedHttpResponse, OkHttpResponse,
 };
+use crate::google::rpc;
 
 use crate::token_validation::*;
 
@@ -73,29 +74,36 @@ where
     ) -> Result<Response<CheckResponse>, Status> {
         log::debug!("Processing v3 request: {:?}", request);
 
-        let http_response = match process_request(&self.validator, request.into_inner()).await {
-            Ok(user_data) => HttpResponse::OkResponse(OkHttpResponse {
-                headers: vec![build_http_header("Auth-Username", &user_data.sub)],
-                headers_to_remove: vec![http::header::AUTHORIZATION.as_str().to_string()],
+        let response = process_request(&self.validator, request.into_inner()).await;
+        log::debug!("Auth v3 response: {:?}", response);
+
+        Ok(Response::new(match response {
+            Ok(user_data) => CheckResponse {
+                http_response: Some(HttpResponse::OkResponse(OkHttpResponse {
+                    headers: vec![build_http_header("Auth-Username", &user_data.sub)],
+                    headers_to_remove: vec![http::header::AUTHORIZATION.as_str().to_string()],
+                    ..Default::default()
+                })),
                 ..Default::default()
-            }),
-            Err(e) => HttpResponse::DeniedResponse(DeniedHttpResponse {
-                status: Some(HttpStatus {
-                    code: http::status::StatusCode::UNAUTHORIZED.as_u16() as i32,
+            },
+            Err(e) => CheckResponse {
+                http_response: Some(HttpResponse::DeniedResponse(DeniedHttpResponse {
+                    status: Some(HttpStatus {
+                        code: http::status::StatusCode::UNAUTHORIZED.as_u16() as i32,
+                    }),
+                    headers: vec![build_http_header(
+                        http::header::WWW_AUTHENTICATE.as_str(),
+                        "Bearer",
+                    )],
+                    body: format!("Error: {}", e),
+                })),
+                status: Some(rpc::Status {
+                    code: rpc::Code::Unauthenticated as i32,
+                    message: format!("Error: {}", e),
+                    details: vec![],
                 }),
-                headers: vec![build_http_header(
-                    http::header::WWW_AUTHENTICATE.as_str(),
-                    "Bearer",
-                )],
-                body: format!("Error: {}", e),
-            }),
-        };
-
-        log::debug!("Auth v3 response: {:?}", http_response);
-
-        Ok(Response::new(CheckResponse {
-            http_response: Some(http_response),
-            ..Default::default()
+                ..Default::default()
+            },
         }))
     }
 }

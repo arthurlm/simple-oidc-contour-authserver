@@ -6,6 +6,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             &[
                 "proto/envoy/api/envoy/service/auth/v2/external_auth.proto",
                 "proto/envoy/api/envoy/service/auth/v3/external_auth.proto",
+                "proto/googleapis/google/rpc/code.proto",
             ],
             &[
                 "proto/envoy/api",
