@@ -113,7 +113,7 @@ impl<'a> AuthenticationService<'a> {
         Ok(Self::new(config, validation_config.into()))
     }
 
-    async fn refresh_token(&self) -> reqwest::Result<()> {
+    pub async fn refresh_token(&self) -> reqwest::Result<()> {
         log::info!("Refreshing token");
         let enveloppe: JwkEnveloppe = self
             .client

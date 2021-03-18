@@ -97,6 +97,7 @@ async fn main() -> anyhow::Result<()> {
 
     // Create auth services
     let auth_service = Arc::new(auth::AuthenticationService::from_env()?);
+    let _ = auth_service.refresh_token().await;
 
     let auth_v2 = checkers::v2::AuthorizationV2::new(auth_service.clone());
     let auth_v3 = checkers::v3::AuthorizationV3::new(auth_service);
