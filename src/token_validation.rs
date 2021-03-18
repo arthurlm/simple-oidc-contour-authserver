@@ -32,6 +32,12 @@ pub enum TokenError {
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct TokenContent {
     pub sub: String,
+
+    #[serde(default)]
+    pub email: Option<String>,
+
+    #[serde(default)]
+    pub name: Option<String>,
 }
 
 #[async_trait]

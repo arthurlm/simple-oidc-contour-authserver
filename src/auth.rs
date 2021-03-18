@@ -300,7 +300,9 @@ mod tests {
         assert_eq!(
             auth.validate(&token).await,
             Ok(TokenContent {
-                sub: "Arthur".to_string()
+                sub: "Arthur".to_string(),
+                email: None,
+                name: None,
             })
         );
         assert_eq!(auth.keys.read().unwrap().len(), 1);

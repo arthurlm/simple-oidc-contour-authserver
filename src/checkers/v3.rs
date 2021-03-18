@@ -80,7 +80,11 @@ where
         Ok(Response::new(match response {
             Ok(user_data) => CheckResponse {
                 http_response: Some(HttpResponse::OkResponse(OkHttpResponse {
-                    headers: vec![build_http_header("Auth-Username", &user_data.sub)],
+                    headers: vec![
+                        build_http_header("Auth-Sub", &user_data.sub),
+                        build_http_header("Auth-Email", &user_data.email.unwrap_or("".into())),
+                        build_http_header("Auth-Name", &user_data.name.unwrap_or("".into())),
+                    ],
                     headers_to_remove: vec![http::header::AUTHORIZATION.as_str().to_string()],
                     ..Default::default()
                 })),
