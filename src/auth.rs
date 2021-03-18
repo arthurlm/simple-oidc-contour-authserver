@@ -98,7 +98,13 @@ impl<'a> AuthenticationService<'a> {
         );
 
         let keys = RwLock::new(HashMap::new());
-        let client = reqwest::Client::new();
+
+        // This may be improved ...
+        let client = reqwest::Client::builder()
+            .danger_accept_invalid_certs(true)
+            .build()
+            .unwrap();
+
         Self {
             config,
             validation,
