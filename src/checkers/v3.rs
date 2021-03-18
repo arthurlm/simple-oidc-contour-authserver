@@ -39,7 +39,7 @@ where
 {
     let headers = extract_http_headers(check_request).ok_or(TokenError::MissingHttpAttribute)?;
     let authorization = headers
-        .get("Authorization")
+        .get(http::header::AUTHORIZATION.as_str())
         .ok_or(TokenError::MissingAuthorizationHeader)?;
 
     validator.validate(authorization).await
@@ -76,7 +76,7 @@ where
         let http_response = match process_request(&self.validator, request.into_inner()).await {
             Ok(user_data) => HttpResponse::OkResponse(OkHttpResponse {
                 headers: vec![build_http_header("Auth-Username", &user_data.sub)],
-                headers_to_remove: vec!["Authorization".to_string()],
+                headers_to_remove: vec![http::header::AUTHORIZATION.as_str().to_string()],
                 ..Default::default()
             }),
             Err(e) => HttpResponse::DeniedResponse(DeniedHttpResponse {

@@ -39,7 +39,7 @@ where
 {
     let headers = extract_http_headers(check_request).ok_or(TokenError::MissingHttpAttribute)?;
     let authorization = headers
-        .get("Authorization")
+        .get(http::header::AUTHORIZATION.as_str())
         .ok_or(TokenError::MissingAuthorizationHeader)?;
 
     validator.validate(authorization).await
