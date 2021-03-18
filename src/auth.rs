@@ -5,6 +5,7 @@ use std::collections::HashMap;
 use std::sync::RwLock;
 use std::time::Duration;
 
+use crate::helpers::read_auth_param;
 use crate::token_validation::*;
 
 static KEY_REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
@@ -128,7 +129,9 @@ impl<'a> AuthenticationService<'a> {
 
 #[async_trait]
 impl<'a> TokenValidator for AuthenticationService<'a> {
-    async fn validate(&self, token: &str) -> Result<TokenContent, TokenError> {
+    async fn validate(&self, authorization: &str) -> Result<TokenContent, TokenError> {
+        let token = read_auth_param("Bearer", authorization)?;
+
         let header = jsonwebtoken::decode_header(token).map_err(|_e| TokenError::InvalidHeader)?;
         let kid = header.kid.ok_or(TokenError::MissingKid)?;
 
@@ -213,21 +216,23 @@ mod tests {
             let key = EncodingKey::from_secret(TOKEN_SECRET);
             let signature = sign(&message, &key, Algorithm::HS256).unwrap();
 
-            format!("{}.{}", message, signature)
+            format!("Bearer   {}.{}", message, signature)
         }};
     }
 
     #[tokio::test]
     async fn test_no_headers() {
         let auth = auth!();
-        assert_eq!(auth.validate("").await, Err(TokenError::InvalidHeader));
-        assert_eq!(auth.validate("foo").await, Err(TokenError::InvalidHeader));
         assert_eq!(
-            auth.validate(".foo.bar").await,
+            auth.validate("Bearer foo").await,
             Err(TokenError::InvalidHeader)
         );
         assert_eq!(
-            auth.validate("baz.foo.bar").await,
+            auth.validate("Bearer .foo.bar").await,
+            Err(TokenError::InvalidHeader)
+        );
+        assert_eq!(
+            auth.validate("Bearer baz.foo.bar").await,
             Err(TokenError::InvalidHeader)
         );
     }
@@ -287,5 +292,27 @@ mod tests {
             })
         );
         assert_eq!(auth.keys.read().unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_authorization_empty() {
+        let auth = auth!();
+        assert_eq!(
+            auth.validate("").await,
+            Err(TokenError::MissingAuthenticationParam)
+        );
+        assert_eq!(
+            auth.validate("   ").await,
+            Err(TokenError::MissingAuthenticationParam)
+        );
+    }
+
+    #[tokio::test]
+    async fn test_authorization_invalid_type() {
+        let auth = auth!();
+        assert_eq!(
+            auth.validate("Basic    YWxhZGRpbjpvcGVuc2VzYW1l").await,
+            Err(TokenError::InvalidAuthenticationType)
+        );
     }
 }

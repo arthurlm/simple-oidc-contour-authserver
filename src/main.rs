@@ -52,6 +52,7 @@ pub mod xds {
 
 mod auth;
 mod checkers;
+mod helpers;
 mod token_validation;
 
 use clap::Clap;

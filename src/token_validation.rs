@@ -7,6 +7,12 @@ pub enum TokenError {
     #[error("missing HTTP attribute")]
     MissingHttpAttribute,
 
+    #[error("invalid authentication type")]
+    InvalidAuthenticationType,
+
+    #[error("missing authentication param")]
+    MissingAuthenticationParam,
+
     #[error("missing JWT header")]
     InvalidHeader,
 
@@ -27,5 +33,5 @@ pub struct TokenContent {
 
 #[async_trait]
 pub trait TokenValidator {
-    async fn validate(&self, token: &str) -> Result<TokenContent, TokenError>;
+    async fn validate(&self, authorization: &str) -> Result<TokenContent, TokenError>;
 }
