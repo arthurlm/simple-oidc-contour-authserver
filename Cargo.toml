@@ -28,3 +28,6 @@ tonic-build = "0.4"
 
 [dev-dependencies]
 base64 = "0.13"
+
+[replace]
+"h2:0.3.1" = { git = "https://github.com/arthurlm/h2.git", rev = "2c26edaa257b934744b13e7c8a8333c94f956d28" }
