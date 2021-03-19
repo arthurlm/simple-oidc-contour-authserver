@@ -20,3 +20,7 @@ It **does not** provide:
 - full OIDC implem
 
 See more details on auth server at: <https://projectcontour.io/guides/external-authorization/>
+
+## K8S example
+
+See [wiki](https://github.com/arthurlm/simple-oidc-contour-authserver/wiki/K8S-resources-example) for details example.

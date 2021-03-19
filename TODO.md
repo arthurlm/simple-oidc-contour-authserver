@@ -3,5 +3,9 @@
 - [x] auth layer using JWT + JWK
 - [x] start gRPC server with registered envoy service
 - [x] add TLS support
-- [ ] connect gRPC and auth layer together
-- [ ] doc + k8s example
+- [x] connect gRPC and auth layer together
+- [x] doc + k8s example
+
+Improvments ideas:
+
+- Add new auth provider (Basic, Digest, ...)
