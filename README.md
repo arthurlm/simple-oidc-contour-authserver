@@ -24,3 +24,27 @@ See more details on auth server at: <https://projectcontour.io/guides/external-a
 ## K8S example
 
 See [wiki](https://github.com/arthurlm/simple-oidc-contour-authserver/wiki/K8S-resources-example) for details example.
+
+## HTTP headers informations
+
+App will add following headers on success:
+
+- `Auth-Sub`: User subject (may be empty)
+- `Auth-Email`: User email (may be empty)
+- `Auth-Name`: User name (may be empty)
+
+Otherwise it will return 401 error status code and do not forward requests to protected backend.
+
+## Contribute guidelines
+
+Feel free to create PR.
+Any help, improvment ideas are welcome !
+
+To run:
+
+    source .envrc
+    cargo r
+
+To test:
+
+    cargo t
