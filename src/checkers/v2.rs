@@ -95,7 +95,7 @@ where
                     }),
                     headers: vec![build_http_header(
                         http::header::WWW_AUTHENTICATE.as_str(),
-                        "Bearer",
+                        T::AUTHENTICATION_SCHEME,
                     )],
                     body: format!("Error: {}", e),
                 })),

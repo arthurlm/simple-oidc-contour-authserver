@@ -135,8 +135,10 @@ impl<'a> BearerAuth<'a> {
 
 #[async_trait]
 impl<'a> AuthValidator for BearerAuth<'a> {
+    const AUTHENTICATION_SCHEME: &'static str = "Bearer";
+
     async fn validate(&self, authorization: &str) -> Result<AuthContent, AuthError> {
-        let token = read_auth_param("Bearer", authorization)?;
+        let token = read_auth_param(Self::AUTHENTICATION_SCHEME, authorization)?;
 
         let header = jsonwebtoken::decode_header(token).map_err(|_e| AuthError::InvalidHeader)?;
         let kid = header.kid.ok_or(AuthError::MissingKid)?;

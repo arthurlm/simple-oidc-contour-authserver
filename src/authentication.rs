@@ -43,5 +43,7 @@ pub struct AuthContent {
 
 #[async_trait]
 pub trait AuthValidator {
+    const AUTHENTICATION_SCHEME: &'static str;
+
     async fn validate(&self, authorization: &str) -> Result<AuthContent, AuthError>;
 }
