@@ -307,11 +307,11 @@ mod tests {
         let auth = auth!();
         assert_eq!(
             auth.validate("").await,
-            Err(AuthError::MissingAuthenticationParam)
+            Err(AuthError::MissingAuthorizationParam)
         );
         assert_eq!(
             auth.validate("   ").await,
-            Err(AuthError::MissingAuthenticationParam)
+            Err(AuthError::MissingAuthorizationParam)
         );
     }
 
@@ -320,7 +320,7 @@ mod tests {
         let auth = auth!();
         assert_eq!(
             auth.validate("Basic    YWxhZGRpbjpvcGVuc2VzYW1l").await,
-            Err(AuthError::InvalidAuthenticationType {
+            Err(AuthError::InvalidAuthorizationType {
                 expected: "Bearer".into(),
                 current: "Basic".into(),
             })

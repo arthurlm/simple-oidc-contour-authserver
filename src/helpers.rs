@@ -12,11 +12,11 @@ pub fn read_auth_param<'a>(
         {
             Ok(auth_param.trim_start())
         }
-        [auth_type, _auth_param] => Err(AuthError::InvalidAuthenticationType {
+        [auth_type, _auth_param] => Err(AuthError::InvalidAuthorizationType {
             expected: expected_auth_type.into(),
             current: auth_type.into(),
         }),
-        _ => Err(AuthError::MissingAuthenticationParam),
+        _ => Err(AuthError::MissingAuthorizationParam),
     }
 }
 
@@ -28,11 +28,11 @@ mod tests {
     fn test_auth_empty() {
         assert_eq!(
             read_auth_param("Basic", ""),
-            Err(AuthError::MissingAuthenticationParam)
+            Err(AuthError::MissingAuthorizationParam)
         );
         assert_eq!(
             read_auth_param("Basic", "   "),
-            Err(AuthError::MissingAuthenticationParam)
+            Err(AuthError::MissingAuthorizationParam)
         );
     }
 
@@ -40,7 +40,7 @@ mod tests {
     fn test_auth_bad_type() {
         assert_eq!(
             read_auth_param("Basic", "Bearer XXXX"),
-            Err(AuthError::InvalidAuthenticationType {
+            Err(AuthError::InvalidAuthorizationType {
                 expected: "Basic".into(),
                 current: "Bearer".into(),
             })
