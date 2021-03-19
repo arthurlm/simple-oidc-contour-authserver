@@ -294,7 +294,7 @@ mod tests {
         assert_eq!(
             auth.validate(&token).await,
             Ok(AuthContent {
-                sub: "Arthur".to_string(),
+                sub: Some("Arthur".to_string()),
                 email: None,
                 name: None,
             })

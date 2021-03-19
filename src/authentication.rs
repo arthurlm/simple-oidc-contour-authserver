@@ -31,7 +31,8 @@ pub enum AuthError {
 
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct AuthContent {
-    pub sub: String,
+    #[serde(default)]
+    pub sub: Option<String>,
 
     #[serde(default)]
     pub email: Option<String>,
