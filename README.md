@@ -32,6 +32,7 @@ App will add following headers on success:
 - `Auth-Sub`: User subject (may be empty)
 - `Auth-Email`: User email (may be empty)
 - `Auth-Name`: User name (may be empty)
+- `Auth-Unique-Name`: User unique name (may be empty)
 
 Otherwise it will return 401 error status code and do not forward requests to protected backend.
 

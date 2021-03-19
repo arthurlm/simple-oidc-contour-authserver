@@ -299,6 +299,7 @@ mod tests {
                 sub: Some("Arthur".to_string()),
                 email: None,
                 name: None,
+                unique_name: None,
             })
         );
         assert_eq!(auth.keys.read().unwrap().len(), 1);

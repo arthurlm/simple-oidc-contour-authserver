@@ -39,6 +39,9 @@ pub struct AuthContent {
 
     #[serde(default)]
     pub name: Option<String>,
+
+    #[serde(default)]
+    pub unique_name: Option<String>,
 }
 
 #[async_trait]

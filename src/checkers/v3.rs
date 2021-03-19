@@ -84,6 +84,10 @@ where
                         build_http_header("Auth-Sub", &user_data.sub.unwrap_or("".into())),
                         build_http_header("Auth-Email", &user_data.email.unwrap_or("".into())),
                         build_http_header("Auth-Name", &user_data.name.unwrap_or("".into())),
+                        build_http_header(
+                            "Auth-Unique-Name",
+                            &user_data.unique_name.unwrap_or("".into()),
+                        ),
                     ],
                     headers_to_remove: vec![http::header::AUTHORIZATION.as_str().to_string()],
                     ..Default::default()
