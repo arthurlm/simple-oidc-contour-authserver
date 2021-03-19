@@ -320,7 +320,10 @@ mod tests {
         let auth = auth!();
         assert_eq!(
             auth.validate("Basic    YWxhZGRpbjpvcGVuc2VzYW1l").await,
-            Err(AuthError::InvalidAuthenticationType)
+            Err(AuthError::InvalidAuthenticationType {
+                expected: "Bearer".into(),
+                current: "Basic".into(),
+            })
         );
     }
 }

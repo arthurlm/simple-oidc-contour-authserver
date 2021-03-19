@@ -10,8 +10,8 @@ pub enum AuthError {
     #[error("missing Authorization HTTP header")]
     MissingAuthorizationHeader,
 
-    #[error("invalid authentication type")]
-    InvalidAuthenticationType,
+    #[error("invalid authentication type (expected: {expected}, current: {current})")]
+    InvalidAuthenticationType { expected: String, current: String },
 
     #[error("missing authentication param")]
     MissingAuthenticationParam,

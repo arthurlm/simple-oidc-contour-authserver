@@ -12,7 +12,10 @@ pub fn read_auth_param<'a>(
         {
             Ok(auth_param.trim_start())
         }
-        [_t, _p] => Err(AuthError::InvalidAuthenticationType),
+        [auth_type, _auth_param] => Err(AuthError::InvalidAuthenticationType {
+            expected: expected_auth_type.into(),
+            current: auth_type.into(),
+        }),
         _ => Err(AuthError::MissingAuthenticationParam),
     }
 }
@@ -37,7 +40,10 @@ mod tests {
     fn test_auth_bad_type() {
         assert_eq!(
             read_auth_param("Basic", "Bearer XXXX"),
-            Err(AuthError::InvalidAuthenticationType)
+            Err(AuthError::InvalidAuthenticationType {
+                expected: "Basic".into(),
+                current: "Bearer".into(),
+            })
         );
     }
 
