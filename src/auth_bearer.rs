@@ -297,9 +297,7 @@ mod tests {
             auth.validate(&token).await,
             Ok(AuthContent {
                 sub: Some("Arthur".to_string()),
-                email: None,
-                name: None,
-                unique_name: None,
+                ..Default::default()
             })
         );
         assert_eq!(auth.keys.read().unwrap().len(), 1);

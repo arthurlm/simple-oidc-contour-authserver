@@ -29,7 +29,9 @@ See [wiki](https://github.com/arthurlm/simple-oidc-contour-authserver/wiki/K8S-r
 
 App will add following headers on success:
 
-- `Auth-Sub`: User subject (may be empty)
+- `Auth-Jwt-Sub`: JWT specific: user subject (may be empty)
+- `Auth-Jwt-Aud`: JWT specific: user audience (may be empty)
+- `Auth-Jwt-Iss`: JWT specific: user issuer (may be empty)
 - `Auth-Email`: User email (may be empty)
 - `Auth-Name`: User name (may be empty)
 - `Auth-Unique-Name`: User unique name (may be empty)
