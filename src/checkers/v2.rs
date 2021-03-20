@@ -14,13 +14,18 @@ use crate::google::rpc;
 
 use crate::authentication::*;
 
-pub fn build_http_header(key: &str, value: &str) -> HeaderValueOption {
-    HeaderValueOption {
-        header: Some(HeaderValue {
-            key: key.into(),
-            value: value.into(),
-        }),
-        ..Default::default()
+fn build_http_header(key: &str, value: &str) -> HeaderValueOption {
+    (key.to_string(), Some(value.to_string())).into()
+}
+
+impl From<AuthItem> for HeaderValueOption {
+    fn from(header_value: AuthItem) -> Self {
+        let (key, value) = header_value;
+        let value = value.unwrap_or("".into());
+        Self {
+            header: Some(HeaderValue { key, value }),
+            ..Default::default()
+        }
     }
 }
 
@@ -80,15 +85,11 @@ where
         Ok(Response::new(match response {
             Ok(user_data) => CheckResponse {
                 http_response: Some(HttpResponse::OkResponse(OkHttpResponse {
-                    headers: vec![
-                        build_http_header("Auth-Sub", &user_data.sub.unwrap_or("".into())),
-                        build_http_header("Auth-Email", &user_data.email.unwrap_or("".into())),
-                        build_http_header("Auth-Name", &user_data.name.unwrap_or("".into())),
-                        build_http_header(
-                            "Auth-Unique-Name",
-                            &user_data.unique_name.unwrap_or("".into()),
-                        ),
-                    ],
+                    headers: user_data
+                        .into_header_vec()
+                        .into_iter()
+                        .map(|x| x.into())
+                        .collect(),
                 })),
                 ..Default::default()
             },

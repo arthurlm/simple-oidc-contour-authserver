@@ -44,6 +44,19 @@ pub struct AuthContent {
     pub unique_name: Option<String>,
 }
 
+pub type AuthItem = (String, Option<String>);
+
+impl AuthContent {
+    pub fn into_header_vec(self) -> Vec<AuthItem> {
+        vec![
+            ("Auth-Sub".to_string(), self.sub),
+            ("Auth-Email".to_string(), self.email),
+            ("Auth-Name".to_string(), self.name),
+            ("Auth-Unique-Name".to_string(), self.unique_name),
+        ]
+    }
+}
+
 #[async_trait]
 pub trait AuthValidator {
     const AUTHENTICATION_SCHEME: &'static str;
