@@ -28,18 +28,18 @@ pub struct ValidationConfig {
     leeway: u64,
 }
 
-impl Into<Validation> for ValidationConfig {
-    fn into(self) -> Validation {
-        let mut validation = Validation {
-            leeway: self.leeway,
+impl From<ValidationConfig> for Validation {
+    fn from(config: ValidationConfig) -> Self {
+        let mut validation = Self {
+            leeway: config.leeway,
             validate_exp: true,
             validate_nbf: false,
-            iss: self.iss,
+            iss: config.iss,
             algorithms: vec![Algorithm::RS256],
             ..Default::default()
         };
 
-        if let Some(aud) = self.aud {
+        if let Some(aud) = config.aud {
             validation.set_audience(&[aud]);
         }
 

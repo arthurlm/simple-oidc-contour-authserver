@@ -21,7 +21,7 @@ fn build_http_header(key: &str, value: &str) -> HeaderValueOption {
 impl From<AuthItem> for HeaderValueOption {
     fn from(header_value: AuthItem) -> Self {
         let (key, value) = header_value;
-        let value = value.unwrap_or("".into());
+        let value = value.unwrap_or_else(|| "".into());
         Self {
             header: Some(HeaderValue { key, value }),
             ..Default::default()

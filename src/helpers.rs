@@ -4,7 +4,7 @@ pub fn read_auth_param<'a>(
     expected_auth_type: &str,
     authorization: &'a str,
 ) -> Result<&'a str, AuthError> {
-    let authorization_items: Vec<_> = authorization.trim_start().splitn(2, " ").collect();
+    let authorization_items: Vec<_> = authorization.trim_start().splitn(2, ' ').collect();
 
     match authorization_items[..] {
         [auth_type, auth_param]
