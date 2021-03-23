@@ -58,10 +58,14 @@ mod helpers;
 use clap::Clap;
 use futures::try_join;
 use std::sync::Arc;
+use std::time::Duration;
 use tonic::transport::{Identity, Server, ServerTlsConfig};
 
 use crate::envoy::service::auth::v2::authorization_server::AuthorizationServer as AuthorizationServerV2;
 use crate::envoy::service::auth::v3::authorization_server::AuthorizationServer as AuthorizationServerV3;
+
+static INTERVAL_KEEPALIVE_HTTP2: Duration = Duration::from_secs(60);
+static INTERVAL_KEEPALIVE_TCP: Duration = Duration::from_secs(60);
 
 #[derive(Clap)]
 #[clap(version = "1.0", author = "Arthur LE MOIGNE. <me@alemoigne.com>")]
@@ -105,6 +109,8 @@ async fn main() -> anyhow::Result<()> {
     log::info!("gRPC server will listen at: {:?}", addr);
     Server::builder()
         .tls_config(ServerTlsConfig::new().identity(identity))?
+        .http2_keepalive_interval(Some(INTERVAL_KEEPALIVE_HTTP2))
+        .tcp_keepalive(Some(INTERVAL_KEEPALIVE_TCP))
         .add_service(AuthorizationServerV2::new(auth_v2))
         .add_service(AuthorizationServerV3::new(auth_v3))
         .serve(addr)
