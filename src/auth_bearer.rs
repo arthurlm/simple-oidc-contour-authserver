@@ -55,8 +55,18 @@ pub struct BearerAuthConfig {
     jwk_url: String,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum KeyInfo {
+    RsaComponents {
+        e: String,
+        n: String,
+    },
+    #[cfg(test)]
+    Secret(Vec<u8>),
+}
+
 #[derive(Debug)]
-pub struct BearerAuth<'a> {
+pub struct BearerAuth {
     /// Service configuration
     config: BearerAuthConfig,
 
@@ -64,7 +74,7 @@ pub struct BearerAuth<'a> {
     validation: Validation,
 
     /// Already in cache keys
-    keys: RwLock<HashMap<String, DecodingKey<'a>>>,
+    keys: RwLock<HashMap<String, KeyInfo>>,
 
     /// Reqwest client
     client: reqwest::Client,
@@ -83,13 +93,16 @@ struct JwkEnveloppe {
     keys: Vec<JwkItem>,
 }
 
-impl<'a> From<JwkItem> for DecodingKey<'a> {
-    fn from(item: JwkItem) -> DecodingKey<'a> {
-        DecodingKey::from_rsa_components(&item.n, &item.e).into_static()
+impl From<JwkItem> for KeyInfo {
+    fn from(item: JwkItem) -> Self {
+        Self::RsaComponents {
+            e: item.e,
+            n: item.n,
+        }
     }
 }
 
-impl<'a> BearerAuth<'a> {
+impl BearerAuth {
     pub fn new(config: BearerAuthConfig, validation: Validation) -> Self {
         log::info!(
             "bearer auth config: {:?}, validation: {:?}",
@@ -134,7 +147,7 @@ impl<'a> BearerAuth<'a> {
 }
 
 #[async_trait]
-impl<'a> AuthValidator for BearerAuth<'a> {
+impl AuthValidator for BearerAuth {
     const AUTHENTICATION_SCHEME: &'static str = "Bearer";
 
     async fn validate(&self, authorization: &str) -> Result<AuthContent, AuthError> {
@@ -152,10 +165,15 @@ impl<'a> AuthValidator for BearerAuth<'a> {
 
         // Get key from cache
         let keys = self.keys.read().unwrap();
-        let key = keys.get(&kid).ok_or(AuthError::InvalidKid)?;
+        let key_info = keys.get(&kid).ok_or(AuthError::InvalidKid)?;
+        let key = match key_info {
+            KeyInfo::RsaComponents { n, e } => DecodingKey::from_rsa_components(&n, &e),
+            #[cfg(test)]
+            KeyInfo::Secret(s) => DecodingKey::from_secret(s),
+        };
 
         // Decode and check token
-        let payload = jsonwebtoken::decode(token, key, &self.validation).map_err(|e| {
+        let payload = jsonwebtoken::decode(token, &key, &self.validation).map_err(|e| {
             log::warn!("Token validation failed: {:?}", e);
             AuthError::InvalidToken
         })?;
@@ -275,7 +293,7 @@ mod tests {
         auth.keys
             .write()
             .unwrap()
-            .insert("test".into(), DecodingKey::from_secret(&[10, 31]));
+            .insert("test".into(), KeyInfo::Secret(vec![10, 31]));
         assert_eq!(auth.keys.read().unwrap().len(), 1);
 
         let token = token!();
@@ -289,7 +307,7 @@ mod tests {
         auth.keys
             .write()
             .unwrap()
-            .insert("test".into(), DecodingKey::from_secret(TOKEN_SECRET));
+            .insert("test".into(), KeyInfo::Secret(TOKEN_SECRET.to_vec()));
         assert_eq!(auth.keys.read().unwrap().len(), 1);
 
         let token = token!();
