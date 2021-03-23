@@ -57,12 +57,16 @@ mod helpers;
 
 use clap::Clap;
 use futures::try_join;
+use jemallocator::Jemalloc;
 use std::sync::Arc;
 use std::time::Duration;
 use tonic::transport::{Identity, Server, ServerTlsConfig};
 
 use crate::envoy::service::auth::v2::authorization_server::AuthorizationServer as AuthorizationServerV2;
 use crate::envoy::service::auth::v3::authorization_server::AuthorizationServer as AuthorizationServerV3;
+
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
 
 static INTERVAL_KEEPALIVE_HTTP2: Duration = Duration::from_secs(60);
 static INTERVAL_KEEPALIVE_TCP: Duration = Duration::from_secs(60);
