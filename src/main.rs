@@ -81,6 +81,10 @@ struct Opts {
     /// TLS cert file to read
     #[clap(long, default_value = "tls.crt")]
     tls_cert: String,
+
+    /// Max number of concurrent requests per connection
+    #[clap(long, default_value = "32")]
+    concurrency_limit_per_connection: usize,
 }
 
 #[tokio::main]
@@ -109,6 +113,7 @@ async fn main() -> anyhow::Result<()> {
     log::info!("gRPC server will listen at: {:?}", addr);
     Server::builder()
         .tls_config(ServerTlsConfig::new().identity(identity))?
+        .concurrency_limit_per_connection(opts.concurrency_limit_per_connection)
         .http2_keepalive_interval(Some(INTERVAL_KEEPALIVE_HTTP2))
         .tcp_keepalive(Some(INTERVAL_KEEPALIVE_TCP))
         .add_service(AuthorizationServerV2::new(auth_v2))
