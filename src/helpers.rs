@@ -50,7 +50,7 @@ mod tests {
     #[test]
     fn test_auth_valid() {
         assert_eq!(
-            read_auth_param("Basic", "Basic    YYYY    "),
+            read_auth_param("Basic", "basic    YYYY    "),
             Ok("YYYY    ")
         );
     }
