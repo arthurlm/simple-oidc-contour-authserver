@@ -16,17 +16,8 @@ pub enum AuthError {
     #[error("missing authorization param")]
     MissingAuthorizationParam,
 
-    #[error("missing JWT header")]
-    InvalidHeader,
-
-    #[error("missing kid")]
-    MissingKid,
-
-    #[error("invalid kid")]
-    InvalidKid,
-
-    #[error("invalid JWT token")]
-    InvalidToken,
+    #[error("payload validation failed: {reason}")]
+    PayloadValidationFail { reason: String },
 }
 
 #[derive(Debug, Deserialize, PartialEq, Default)]

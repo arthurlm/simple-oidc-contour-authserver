@@ -4,6 +4,7 @@ use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::RwLock;
 use std::time::Duration;
+use thiserror::Error;
 
 use crate::authentication::*;
 use crate::helpers::read_auth_param;
@@ -63,6 +64,29 @@ pub enum KeyInfo {
     },
     #[cfg(test)]
     Secret(Vec<u8>),
+}
+
+#[derive(Debug, Error)]
+enum BearerAuthError {
+    #[error("missing JWT header")]
+    InvalidHeader,
+
+    #[error("missing kid")]
+    MissingKid,
+
+    #[error("invalid kid")]
+    InvalidKid,
+
+    #[error("invalid JWT token")]
+    InvalidToken,
+}
+
+impl From<BearerAuthError> for AuthError {
+    fn from(error: BearerAuthError) -> Self {
+        Self::PayloadValidationFail {
+            reason: format!("{}", error),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -153,8 +177,9 @@ impl AuthValidator for BearerAuth {
     async fn validate(&self, authorization: &str) -> Result<AuthContent, AuthError> {
         let token = read_auth_param(Self::AUTHENTICATION_SCHEME, authorization)?;
 
-        let header = jsonwebtoken::decode_header(token).map_err(|_e| AuthError::InvalidHeader)?;
-        let kid = header.kid.ok_or(AuthError::MissingKid)?;
+        let header =
+            jsonwebtoken::decode_header(token).map_err(|_e| BearerAuthError::InvalidHeader)?;
+        let kid = header.kid.ok_or(BearerAuthError::MissingKid)?;
 
         // Check if kid is in cache and refresh keys if not
         if !self.keys.read().unwrap().contains_key(&kid) {
@@ -165,7 +190,7 @@ impl AuthValidator for BearerAuth {
 
         // Get key from cache
         let keys = self.keys.read().unwrap();
-        let key_info = keys.get(&kid).ok_or(AuthError::InvalidKid)?;
+        let key_info = keys.get(&kid).ok_or(BearerAuthError::InvalidKid)?;
         let key = match key_info {
             KeyInfo::RsaComponents { n, e } => DecodingKey::from_rsa_components(&n, &e),
             #[cfg(test)]
@@ -175,7 +200,7 @@ impl AuthValidator for BearerAuth {
         // Decode and check token
         let payload = jsonwebtoken::decode(token, &key, &self.validation).map_err(|e| {
             log::warn!("Token validation failed: {:?}", e);
-            AuthError::InvalidToken
+            BearerAuthError::InvalidToken
         })?;
 
         Ok(payload.claims)
@@ -246,20 +271,28 @@ mod tests {
         }};
     }
 
+    macro_rules! bearer_auth_error {
+        ($error:expr) => {
+            Err(AuthError::PayloadValidationFail {
+                reason: format!("{}", $error),
+            })
+        };
+    }
+
     #[tokio::test]
     async fn test_no_headers() {
         let auth = auth!();
         assert_eq!(
             auth.validate("Bearer foo").await,
-            Err(AuthError::InvalidHeader)
+            bearer_auth_error!(BearerAuthError::InvalidHeader)
         );
         assert_eq!(
             auth.validate("Bearer .foo.bar").await,
-            Err(AuthError::InvalidHeader)
+            bearer_auth_error!(BearerAuthError::InvalidHeader)
         );
         assert_eq!(
             auth.validate("Bearer baz.foo.bar").await,
-            Err(AuthError::InvalidHeader)
+            bearer_auth_error!(BearerAuthError::InvalidHeader)
         );
     }
 
@@ -274,7 +307,10 @@ mod tests {
         );
 
         let auth = auth!();
-        assert_eq!(auth.validate(&token).await, Err(AuthError::MissingKid));
+        assert_eq!(
+            auth.validate(&token).await,
+            bearer_auth_error!(BearerAuthError::MissingKid)
+        );
     }
 
     #[tokio::test]
@@ -297,7 +333,10 @@ mod tests {
         assert_eq!(auth.keys.read().unwrap().len(), 1);
 
         let token = token!();
-        assert_eq!(auth.validate(&token).await, Err(AuthError::InvalidToken));
+        assert_eq!(
+            auth.validate(&token).await,
+            bearer_auth_error!(BearerAuthError::InvalidToken)
+        );
         assert_eq!(auth.keys.read().unwrap().len(), 1);
     }
 
