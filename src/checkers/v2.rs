@@ -41,7 +41,7 @@ async fn process_request<T>(
     check_request: CheckRequest,
 ) -> Result<AuthContent, AuthError>
 where
-    T: AuthValidator + Send + Sync + 'static,
+    T: AuthValidator + Send + Sync,
 {
     let headers = extract_http_headers(check_request).ok_or(AuthError::MissingHttpAttribute)?;
     let authorization = headers
@@ -54,14 +54,14 @@ where
 #[derive(Debug)]
 pub struct AuthorizationV2<T>
 where
-    T: AuthValidator + Send + Sync + 'static,
+    T: AuthValidator + Send + Sync,
 {
     validator: Arc<T>,
 }
 
 impl<T> AuthorizationV2<T>
 where
-    T: AuthValidator + Send + Sync + 'static,
+    T: AuthValidator + Send + Sync,
 {
     pub fn new(validator: Arc<T>) -> Self {
         Self { validator }
