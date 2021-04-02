@@ -50,6 +50,7 @@ pub mod xds {
     }
 }
 
+mod auth_basic;
 mod auth_bearer;
 mod authentication;
 mod checkers;
@@ -58,10 +59,12 @@ mod helpers;
 use clap::Clap;
 use futures::try_join;
 use jemallocator::Jemalloc;
+use std::fs;
 use std::sync::Arc;
 use std::time::Duration;
 use tonic::transport::{Identity, Server, ServerTlsConfig};
 
+use crate::authentication::AuthValidator;
 use crate::envoy::service::auth::v2::authorization_server::AuthorizationServer as AuthorizationServerV2;
 use crate::envoy::service::auth::v3::authorization_server::AuthorizationServer as AuthorizationServerV3;
 
@@ -71,7 +74,7 @@ static GLOBAL: Jemalloc = Jemalloc;
 static INTERVAL_KEEPALIVE_HTTP2: Duration = Duration::from_secs(60);
 static INTERVAL_KEEPALIVE_TCP: Duration = Duration::from_secs(60);
 
-#[derive(Clap)]
+#[derive(Debug, Clap)]
 #[clap(version = "1.0", author = "Arthur LE MOIGNE. <me@alemoigne.com>")]
 struct Opts {
     /// Addr to bind on
@@ -89,14 +92,32 @@ struct Opts {
     /// Max number of concurrent requests per connection
     #[clap(long, default_value = "32")]
     concurrency_limit_per_connection: usize,
+
+    /// Auth type to use
+    #[clap(subcommand)]
+    auth_type: AuthType,
 }
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    env_logger::init();
+#[derive(Debug, Clap)]
+enum AuthType {
+    /// Bearer JWT auth type
+    Bearer,
 
-    // Parse CLI
-    let opts = Opts::parse();
+    /// Basic auth type
+    Basic(BasicParam),
+}
+
+#[derive(Debug, Clap)]
+struct BasicParam {
+    /// Filename to read htpasswd data from
+    filename: String,
+}
+
+async fn run_server<T>(opts: Opts, svc: T) -> anyhow::Result<()>
+where
+    T: AuthValidator + Send + Sync + 'static,
+{
+    // Parse CLI addr
     let addr = opts.addr.parse()?;
 
     // Read TLS data
@@ -107,12 +128,10 @@ async fn main() -> anyhow::Result<()> {
 
     let identity = Identity::from_pem(cert, key);
 
-    // Create auth services
-    let bearer_service = Arc::new(auth_bearer::BearerAuth::from_env()?);
-    let _ = bearer_service.refresh_token().await;
-
-    let auth_v2 = checkers::v2::AuthorizationV2::new(bearer_service.clone());
-    let auth_v3 = checkers::v3::AuthorizationV3::new(bearer_service);
+    // Init gRPC impl
+    let svc = Arc::new(svc);
+    let auth_v2 = checkers::v2::AuthorizationV2::new(svc.clone());
+    let auth_v3 = checkers::v3::AuthorizationV3::new(svc);
 
     log::info!("gRPC server will listen at: {:?}", addr);
     Server::builder()
@@ -126,4 +145,25 @@ async fn main() -> anyhow::Result<()> {
         .await?;
 
     Ok(())
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    env_logger::init();
+    let opts = Opts::parse();
+
+    match opts.auth_type {
+        AuthType::Bearer => {
+            let bearer_service = auth_bearer::BearerAuth::from_env()?;
+            let _ = bearer_service.refresh_token().await;
+
+            run_server(opts, bearer_service).await
+        }
+        AuthType::Basic(ref param) => {
+            let data = fs::read_to_string(&param.filename)?;
+            let basic_svc = auth_basic::BasicAuth::new(&data);
+
+            run_server(opts, basic_svc).await
+        }
+    }
 }

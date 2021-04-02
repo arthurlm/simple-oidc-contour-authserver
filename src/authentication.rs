@@ -18,6 +18,9 @@ pub enum AuthError {
 
     #[error("payload validation failed: {reason}")]
     PayloadValidationFail { reason: String },
+
+    #[error("access denied")]
+    AccessDenied,
 }
 
 #[derive(Debug, Deserialize, PartialEq, Default)]
