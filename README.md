@@ -41,12 +41,12 @@ Otherwise it will return 401 error status code and do not forward requests to pr
 ## Contribute guidelines
 
 Feel free to create PR.
-Any help, improvment ideas are welcome !
+Any help, improvment ideas are welcome :smile: !
 
 To run:
 
     source .envrc
-    cargo r
+    cargo r bearer
 
 To test:
 
