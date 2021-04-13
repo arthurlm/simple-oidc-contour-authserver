@@ -48,6 +48,10 @@ pub struct AuthContent {
     /// Auth subject unique name
     #[serde(default)]
     pub unique_name: Option<String>,
+
+    /// Roles associated to user
+    #[serde(default)]
+    pub roles: Option<Vec<String>>,
 }
 
 pub type AuthItem = (String, Option<String>);
@@ -61,6 +65,7 @@ impl AuthContent {
             ("Auth-Email".to_string(), self.email),
             ("Auth-Name".to_string(), self.name),
             ("Auth-Unique-Name".to_string(), self.unique_name),
+            ("Auth-Roles".to_string(), self.roles.map(|x| x.join(","))),
         ]
     }
 }

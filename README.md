@@ -27,14 +27,15 @@ See [wiki](https://github.com/arthurlm/simple-oidc-contour-authserver/wiki/K8S-r
 
 ## HTTP headers informations
 
-App will add following headers on success:
+App will add following headers on success (each may be empty):
 
-- `Auth-Jwt-Sub`: JWT specific: user subject (may be empty)
-- `Auth-Jwt-Aud`: JWT specific: user audience (may be empty)
-- `Auth-Jwt-Iss`: JWT specific: user issuer (may be empty)
-- `Auth-Email`: User email (may be empty)
-- `Auth-Name`: User name (may be empty)
-- `Auth-Unique-Name`: User unique name (may be empty)
+- `Auth-Jwt-Sub`: JWT specific: user subject
+- `Auth-Jwt-Aud`: JWT specific: user audience
+- `Auth-Jwt-Iss`: JWT specific: user issuer
+- `Auth-Email`: User email
+- `Auth-Name`: User name
+- `Auth-Unique-Name`: User unique name
+- `Auth-Roles`: User roles
 
 Otherwise it will return 401 error status code and do not forward requests to protected backend.
 
