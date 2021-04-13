@@ -76,3 +76,60 @@ pub trait AuthValidator {
 
     async fn validate(&self, authorization: &str) -> Result<AuthContent, AuthError>;
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! http_header {
+        ($k:expr) => {
+            ($k.into(), None)
+        };
+        ($k:expr, $v:expr) => {
+            ($k.into(), Some($v.into()))
+        };
+    }
+
+    #[test]
+    fn test_headers_empty() {
+        let data: AuthContent = Default::default();
+
+        assert_eq!(
+            data.into_header_vec(),
+            vec![
+                http_header!("Auth-Jwt-Sub"),
+                http_header!("Auth-Jwt-Aud"),
+                http_header!("Auth-Jwt-Iss"),
+                http_header!("Auth-Email"),
+                http_header!("Auth-Name"),
+                http_header!("Auth-Unique-Name"),
+                http_header!("Auth-Roles"),
+            ]
+        );
+    }
+    #[test]
+    fn test_headers_with_data() {
+        let data = AuthContent {
+            sub: Some("sub".to_string()),
+            iss: Some("iss".to_string()),
+            aud: Some("aud".to_string()),
+            email: Some("email".to_string()),
+            name: Some("name".to_string()),
+            unique_name: Some("unique_name".to_string()),
+            roles: Some(vec!["r1".to_string(), "r2".to_string()]),
+        };
+
+        assert_eq!(
+            data.into_header_vec(),
+            vec![
+                http_header!("Auth-Jwt-Sub", "sub"),
+                http_header!("Auth-Jwt-Aud", "aud"),
+                http_header!("Auth-Jwt-Iss", "iss"),
+                http_header!("Auth-Email", "email"),
+                http_header!("Auth-Name", "name"),
+                http_header!("Auth-Unique-Name", "unique_name"),
+                http_header!("Auth-Roles", "r1,r2"),
+            ]
+        );
+    }
+}
