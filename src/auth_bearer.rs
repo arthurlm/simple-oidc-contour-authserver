@@ -54,6 +54,11 @@ pub struct BearerAuthConfig {
     /// Exemple: https://login.microsoftonline.com/common/discovery/v2.0/keys
     /// You can easily found this in '.well-known' configs
     jwk_url: String,
+
+    /// Add some extra constraints to allow / disallow user.
+    /// For example 'required roles', ...
+    #[serde(flatten, default)]
+    constraints: AuthConstraint,
 }
 
 #[derive(Debug, PartialEq)]
@@ -198,10 +203,13 @@ impl AuthValidator for BearerAuth {
         };
 
         // Decode and check token
-        let payload = jsonwebtoken::decode(token, &key, &self.validation).map_err(|e| {
-            log::warn!("Token validation failed: {:?}", e);
-            BearerAuthError::InvalidToken
-        })?;
+        let payload =
+            jsonwebtoken::decode::<AuthContent>(token, &key, &self.validation).map_err(|e| {
+                log::warn!("Token validation failed: {:?}", e);
+                BearerAuthError::InvalidToken
+            })?;
+
+        payload.claims.is_authorized(&self.config.constraints)?;
 
         Ok(payload.claims)
     }
@@ -218,6 +226,7 @@ mod tests {
         () => {
             BearerAuthConfig {
                 jwk_url: "https://login.microsoftonline.com/common/discovery/v2.0/keys".into(),
+                constraints: AuthConstraint::default(),
             }
         };
     }
@@ -232,11 +241,14 @@ mod tests {
     macro_rules! auth {
         () => {{
             let config = config!();
+            auth!(config)
+        }};
+        ($config:expr) => {{
             let validation = Validation {
                 validate_exp: false,
                 ..Default::default()
             };
-            BearerAuth::new(config, validation.into())
+            BearerAuth::new($config, validation.into())
         }};
     }
 
@@ -381,6 +393,50 @@ mod tests {
             Err(AuthError::InvalidAuthorizationType {
                 expected: "Bearer".into(),
                 current: "Basic".into(),
+            })
+        );
+    }
+
+    #[tokio::test]
+    async fn test_constraints() {
+        let config = BearerAuthConfig {
+            jwk_url: "https://login.microsoftonline.com/common/discovery/v2.0/keys".into(),
+            constraints: AuthConstraint {
+                required_role: Some("r1".to_string()),
+            },
+        };
+        let auth = auth!(config);
+        auth.keys
+            .write()
+            .unwrap()
+            .insert("test".into(), KeyInfo::Secret(TOKEN_SECRET.to_vec()));
+        assert_eq!(auth.keys.read().unwrap().len(), 1);
+
+        // Test missing roles
+        let token = token!(
+            json!({"typ": "JWT", "alg": "HS256", "kid": "test"}),
+            json!({"sub": "Arthur"})
+        );
+        assert_eq!(auth.validate(&token).await, Err(AuthError::AccessDenied));
+
+        // Test bad roles
+        let token = token!(
+            json!({"typ": "JWT", "alg": "HS256", "kid": "test"}),
+            json!({"sub": "Arthur", "roles": ["r2"]})
+        );
+        assert_eq!(auth.validate(&token).await, Err(AuthError::AccessDenied));
+
+        // Test valid token
+        let token = token!(
+            json!({"typ": "JWT", "alg": "HS256", "kid": "test"}),
+            json!({"sub": "Arthur", "roles": ["r1"]})
+        );
+        assert_eq!(
+            auth.validate(&token).await,
+            Ok(AuthContent {
+                sub: Some("Arthur".to_string()),
+                roles: Some(vec!["r1".to_string()]),
+                ..Default::default()
             })
         );
     }

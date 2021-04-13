@@ -68,6 +68,25 @@ impl AuthContent {
             ("Auth-Roles".to_string(), self.roles.map(|x| x.join(","))),
         ]
     }
+
+    pub fn is_authorized(&self, auth_constraint: &AuthConstraint) -> Result<(), AuthError> {
+        if let Some(required_role) = &auth_constraint.required_role {
+            let roles = self.roles.as_ref().ok_or(AuthError::AccessDenied)?;
+
+            if !roles.contains(required_role) {
+                return Err(AuthError::AccessDenied);
+            };
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct AuthConstraint {
+    /// Role user need to have
+    #[serde(default)]
+    pub required_role: Option<String>,
 }
 
 #[async_trait]
@@ -131,5 +150,52 @@ mod tests {
                 http_header!("Auth-Roles", "r1,r2"),
             ]
         );
+    }
+
+    #[test]
+    fn test_auth_no_requirement() {
+        let constraint = AuthConstraint {
+            required_role: None,
+        };
+
+        let content = AuthContent::default();
+        assert_eq!(content.is_authorized(&constraint), Ok(()));
+
+        let content = AuthContent {
+            roles: Some(vec!["r1".to_string(), "r2".to_string()]),
+            ..Default::default()
+        };
+        assert_eq!(content.is_authorized(&constraint), Ok(()));
+    }
+
+    #[test]
+    fn test_auth_role_required() {
+        let constraint = AuthConstraint {
+            required_role: Some("r1".to_string()),
+        };
+
+        // No roles
+        let content = AuthContent::default();
+        assert_eq!(
+            content.is_authorized(&constraint),
+            Err(AuthError::AccessDenied)
+        );
+
+        // Bad roles
+        let content = AuthContent {
+            roles: Some(vec!["r2".to_string()]),
+            ..Default::default()
+        };
+        assert_eq!(
+            content.is_authorized(&constraint),
+            Err(AuthError::AccessDenied)
+        );
+
+        // Good roles
+        let content = AuthContent {
+            roles: Some(vec!["r1".to_string(), "r2".to_string()]),
+            ..Default::default()
+        };
+        assert_eq!(content.is_authorized(&constraint), Ok(()));
     }
 }
