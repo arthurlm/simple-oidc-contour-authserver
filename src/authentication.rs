@@ -92,6 +92,7 @@ pub struct AuthConstraint {
 #[derive(Debug, Default)]
 pub struct AuthRequest {
     pub authorization: Option<String>,
+    pub source_ip_addr: Option<String>,
 }
 
 #[async_trait]

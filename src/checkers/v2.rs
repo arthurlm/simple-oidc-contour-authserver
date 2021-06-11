@@ -1,9 +1,8 @@
 use async_trait::async_trait;
-use std::collections::HashMap;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
-use crate::envoy::api::v2::core::{HeaderValue, HeaderValueOption};
+use crate::envoy::api::v2::core::{address::Address, HeaderValue, HeaderValueOption};
 use crate::envoy::r#type::HttpStatus;
 use crate::envoy::service::auth::v2::authorization_server::Authorization;
 use crate::envoy::service::auth::v2::check_response::HttpResponse;
@@ -29,11 +28,25 @@ impl From<AuthItem> for HeaderValueOption {
     }
 }
 
-fn extract_http_headers(check_request: CheckRequest) -> Option<HashMap<String, String>> {
-    let attributes = check_request.attributes?;
-    let request = attributes.request?;
-    let req_http = request.http?;
-    Some(req_http.headers)
+fn extract_http_headers_authorization(check_request: &CheckRequest) -> Option<String> {
+    let attributes = check_request.attributes.as_ref()?;
+    let request = attributes.request.as_ref()?;
+    let req_http = request.http.as_ref()?;
+    req_http
+        .headers
+        .get(http::header::AUTHORIZATION.as_str())
+        .cloned()
+}
+
+fn extract_source_ip_addr(check_request: &CheckRequest) -> Option<String> {
+    let attributes = check_request.attributes.as_ref()?;
+    let source = attributes.source.as_ref()?;
+    let address = source.address.as_ref()?;
+    let core_address = address.address.as_ref()?;
+    match core_address {
+        Address::SocketAddress(sock) => Some(sock.address.clone()),
+        _ => None,
+    }
 }
 
 async fn process_request<T>(
@@ -43,9 +56,9 @@ async fn process_request<T>(
 where
     T: AuthValidator,
 {
-    let headers = extract_http_headers(check_request).unwrap_or_default();
     let request = AuthRequest {
-        authorization: headers.get(http::header::AUTHORIZATION.as_str()).cloned(),
+        authorization: extract_http_headers_authorization(&check_request),
+        source_ip_addr: extract_source_ip_addr(&check_request),
     };
 
     validator.validate(request).await
