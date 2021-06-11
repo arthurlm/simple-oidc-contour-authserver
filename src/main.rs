@@ -56,12 +56,12 @@ mod authentication;
 mod checkers;
 mod helpers;
 
-use clap::Clap;
 use futures::try_join;
 use jemallocator::Jemalloc;
 use std::fs;
 use std::sync::Arc;
 use std::time::Duration;
+use structopt::StructOpt;
 use tonic::transport::{Identity, Server, ServerTlsConfig};
 
 use crate::authentication::AuthValidator;
@@ -74,31 +74,31 @@ static GLOBAL: Jemalloc = Jemalloc;
 static INTERVAL_KEEPALIVE_HTTP2: Duration = Duration::from_secs(60);
 static INTERVAL_KEEPALIVE_TCP: Duration = Duration::from_secs(60);
 
-#[derive(Debug, Clap)]
-#[clap(version = "1.0", author = "Arthur LE MOIGNE. <me@alemoigne.com>")]
+#[derive(Debug, StructOpt)]
+#[structopt(version = "1.0", author = "Arthur LE MOIGNE. <me@alemoigne.com>")]
 struct Opts {
     /// Addr to bind on
-    #[clap(short, long, default_value = "0.0.0.0:50051")]
+    #[structopt(short, long, default_value = "0.0.0.0:50051")]
     addr: String,
 
     /// TLS key file to read
-    #[clap(long, default_value = "tls.key")]
+    #[structopt(long, default_value = "tls.key")]
     tls_key: String,
 
     /// TLS cert file to read
-    #[clap(long, default_value = "tls.crt")]
+    #[structopt(long, default_value = "tls.crt")]
     tls_cert: String,
 
     /// Max number of concurrent requests per connection
-    #[clap(long, default_value = "32")]
+    #[structopt(long, default_value = "32")]
     concurrency_limit_per_connection: usize,
 
     /// Auth type to use
-    #[clap(subcommand)]
+    #[structopt(subcommand)]
     auth_type: AuthType,
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, StructOpt)]
 enum AuthType {
     /// Bearer JWT auth type
     Bearer,
@@ -107,7 +107,7 @@ enum AuthType {
     Basic(BasicParam),
 }
 
-#[derive(Debug, Clap)]
+#[derive(Debug, StructOpt)]
 struct BasicParam {
     /// Filename to read htpasswd data from
     filename: String,
@@ -150,7 +150,7 @@ where
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init();
-    let opts = Opts::parse();
+    let opts = Opts::from_args();
 
     match opts.auth_type {
         AuthType::Bearer => {
