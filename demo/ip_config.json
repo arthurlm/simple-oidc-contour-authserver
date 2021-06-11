@@ -1,0 +1,9 @@
+{
+  "allow_list": [
+    {
+      "ip": "192.168.1.158",
+      "email": "foo@example.com",
+      "roles": ["User", "Test"]
+    }
+  ]
+}

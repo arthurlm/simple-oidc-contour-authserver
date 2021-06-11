@@ -52,6 +52,7 @@ pub mod xds {
 
 mod auth_basic;
 mod auth_bearer;
+mod auth_ip;
 mod authentication;
 mod checkers;
 mod helpers;
@@ -105,11 +106,20 @@ enum AuthType {
 
     /// Basic auth type
     Basic(BasicParam),
+
+    /// Ip allow list
+    IpAllowList(IpAllowListParam),
 }
 
 #[derive(Debug, StructOpt)]
 struct BasicParam {
     /// Filename to read htpasswd data from
+    filename: String,
+}
+
+#[derive(Debug, StructOpt)]
+struct IpAllowListParam {
+    /// Filename to read config from
     filename: String,
 }
 
@@ -164,6 +174,11 @@ async fn main() -> anyhow::Result<()> {
             let basic_svc = auth_basic::BasicAuth::new(&data);
 
             run_server(opts, basic_svc).await
+        }
+        AuthType::IpAllowList(ref param) => {
+            let svc = auth_ip::IpAuth::from_file(&param.filename)?;
+
+            run_server(opts, svc).await
         }
     }
 }

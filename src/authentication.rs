@@ -20,7 +20,7 @@ pub enum AuthError {
     AccessDenied,
 }
 
-#[derive(Debug, Deserialize, PartialEq, Default)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Default)]
 pub struct AuthContent {
     /// Auth subject (JWT standard fields)
     #[serde(default)]
