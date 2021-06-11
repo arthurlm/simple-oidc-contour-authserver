@@ -4,9 +4,6 @@ use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq)]
 pub enum AuthError {
-    #[error("missing HTTP attribute")]
-    MissingHttpAttribute,
-
     #[error("missing authorization HTTP header")]
     MissingAuthorizationHeader,
 

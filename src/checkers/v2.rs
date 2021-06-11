@@ -43,7 +43,7 @@ async fn process_request<T>(
 where
     T: AuthValidator,
 {
-    let headers = extract_http_headers(check_request).ok_or(AuthError::MissingHttpAttribute)?;
+    let headers = extract_http_headers(check_request).unwrap_or_default();
     let request = AuthRequest {
         authorization: headers.get(http::header::AUTHORIZATION.as_str()).cloned(),
     };
