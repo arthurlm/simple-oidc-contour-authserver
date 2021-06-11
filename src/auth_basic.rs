@@ -63,8 +63,11 @@ fn payload_to_user_pass(payload_bin: &str) -> Result<AuthInfo, BasicAuthError> {
 impl AuthValidator for BasicAuth {
     const AUTHENTICATION_SCHEME: &'static str = "Basic";
 
-    async fn validate(&self, authorization: &str) -> Result<AuthContent, AuthError> {
-        let payload = read_auth_param(Self::AUTHENTICATION_SCHEME, authorization)?;
+    async fn validate(&self, request: AuthRequest) -> Result<AuthContent, AuthError> {
+        let authorization = request
+            .authorization
+            .ok_or(AuthError::MissingAuthorizationHeader)?;
+        let payload = read_auth_param(Self::AUTHENTICATION_SCHEME, &authorization)?;
         let auth_info = payload_to_user_pass(&payload)?;
 
         let htpasswd = htpasswd_verify::load(&self.htpasswd_config);
@@ -93,20 +96,33 @@ mod tests {
         };
     }
 
+    macro_rules! auth_req {
+        ($req:expr) => {
+            AuthRequest {
+                authorization: Some($req.into()),
+                ..Default::default()
+            }
+        };
+    }
+
     #[tokio::test]
     async fn test_invalid_scheme() {
         let auth = auth!();
 
         assert_eq!(
-            auth.validate("").await,
+            auth.validate(AuthRequest::default()).await,
+            Err(AuthError::MissingAuthorizationHeader)
+        );
+        assert_eq!(
+            auth.validate(auth_req!("")).await,
             Err(AuthError::MissingAuthorizationParam)
         );
         assert_eq!(
-            auth.validate("toto").await,
+            auth.validate(auth_req!("toto")).await,
             Err(AuthError::MissingAuthorizationParam)
         );
         assert_eq!(
-            auth.validate("bearer 123456").await,
+            auth.validate(auth_req!("bearer 123456")).await,
             Err(AuthError::InvalidAuthorizationType {
                 expected: "Basic".into(),
                 current: "bearer".into(),
@@ -127,15 +143,15 @@ mod tests {
         let auth = auth!();
 
         assert_eq!(
-            auth.validate("Basic ❤").await,
+            auth.validate(auth_req!("Basic ❤")).await,
             basic_auth_err!("bad auth payload"),
         );
         assert_eq!(
-            auth.validate("Basic XXXX").await,
+            auth.validate(auth_req!("Basic XXXX")).await,
             basic_auth_err!("invalid char"),
         );
         assert_eq!(
-            auth.validate("Basic YXJ0aHVybG0=").await,
+            auth.validate(auth_req!("Basic YXJ0aHVybG0=")).await,
             basic_auth_err!(BasicAuthError::MissingAuthElements),
         );
     }
@@ -145,11 +161,12 @@ mod tests {
         let auth = auth!();
 
         assert_eq!(
-            auth.validate("Basic YXJ0aHVybG06").await,
+            auth.validate(auth_req!("Basic YXJ0aHVybG06")).await,
             Err(AuthError::AccessDenied)
         );
         assert_eq!(
-            auth.validate("Basic YXJ0aHVybG06dGVzdDEyMzQ=").await,
+            auth.validate(auth_req!("Basic YXJ0aHVybG06dGVzdDEyMzQ="))
+                .await,
             Err(AuthError::AccessDenied)
         );
     }
@@ -159,7 +176,8 @@ mod tests {
         let auth = auth!();
 
         assert_eq!(
-            auth.validate("Basic YXJ0aHVybG06dG9wc2VjcmV0").await,
+            auth.validate(auth_req!("Basic YXJ0aHVybG06dG9wc2VjcmV0"))
+                .await,
             Ok(AuthContent {
                 sub: Some("arthurlm".to_string()),
                 ..Default::default()

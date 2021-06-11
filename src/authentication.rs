@@ -89,11 +89,19 @@ pub struct AuthConstraint {
     pub required_role: Option<String>,
 }
 
+/// Represent standardized information about user request.
+///
+/// It is a common structure between request V2 and V3.
+#[derive(Debug, Default)]
+pub struct AuthRequest {
+    pub authorization: Option<String>,
+}
+
 #[async_trait]
 pub trait AuthValidator {
     const AUTHENTICATION_SCHEME: &'static str;
 
-    async fn validate(&self, authorization: &str) -> Result<AuthContent, AuthError>;
+    async fn validate(&self, request: AuthRequest) -> Result<AuthContent, AuthError>;
 }
 
 #[cfg(test)]

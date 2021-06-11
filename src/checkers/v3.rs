@@ -44,11 +44,11 @@ where
     T: AuthValidator,
 {
     let headers = extract_http_headers(check_request).ok_or(AuthError::MissingHttpAttribute)?;
-    let authorization = headers
-        .get(http::header::AUTHORIZATION.as_str())
-        .ok_or(AuthError::MissingAuthorizationHeader)?;
+    let request = AuthRequest {
+        authorization: headers.get(http::header::AUTHORIZATION.as_str()).cloned(),
+    };
 
-    validator.validate(authorization).await
+    validator.validate(request).await
 }
 
 #[derive(Debug)]

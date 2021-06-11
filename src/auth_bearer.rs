@@ -179,8 +179,11 @@ impl BearerAuth {
 impl AuthValidator for BearerAuth {
     const AUTHENTICATION_SCHEME: &'static str = "Bearer";
 
-    async fn validate(&self, authorization: &str) -> Result<AuthContent, AuthError> {
-        let token = read_auth_param(Self::AUTHENTICATION_SCHEME, authorization)?;
+    async fn validate(&self, request: AuthRequest) -> Result<AuthContent, AuthError> {
+        let authorization = request
+            .authorization
+            .ok_or(AuthError::MissingAuthorizationHeader)?;
+        let token = read_auth_param(Self::AUTHENTICATION_SCHEME, &authorization)?;
 
         let header =
             jsonwebtoken::decode_header(token).map_err(|_e| BearerAuthError::InvalidHeader)?;
@@ -291,19 +294,33 @@ mod tests {
         };
     }
 
+    macro_rules! auth_req {
+        ($req:expr) => {
+            AuthRequest {
+                authorization: Some($req.into()),
+                ..Default::default()
+            }
+        };
+    }
+
     #[tokio::test]
     async fn test_no_headers() {
         let auth = auth!();
+
         assert_eq!(
-            auth.validate("Bearer foo").await,
+            auth.validate(AuthRequest::default()).await,
+            Err(AuthError::MissingAuthorizationHeader)
+        );
+        assert_eq!(
+            auth.validate(auth_req!("Bearer foo")).await,
             bearer_auth_error!(BearerAuthError::InvalidHeader)
         );
         assert_eq!(
-            auth.validate("Bearer .foo.bar").await,
+            auth.validate(auth_req!("Bearer .foo.bar")).await,
             bearer_auth_error!(BearerAuthError::InvalidHeader)
         );
         assert_eq!(
-            auth.validate("Bearer baz.foo.bar").await,
+            auth.validate(auth_req!("Bearer baz.foo.bar")).await,
             bearer_auth_error!(BearerAuthError::InvalidHeader)
         );
     }
@@ -320,7 +337,7 @@ mod tests {
 
         let auth = auth!();
         assert_eq!(
-            auth.validate(&token).await,
+            auth.validate(auth_req!(token)).await,
             bearer_auth_error!(BearerAuthError::MissingKid)
         );
     }
@@ -331,7 +348,7 @@ mod tests {
         assert_eq!(auth.keys.read().unwrap().len(), 0);
 
         let token = token!();
-        let _ = auth.validate(&token).await;
+        let _ = auth.validate(auth_req!(token)).await;
         assert_ne!(auth.keys.read().unwrap().len(), 0);
     }
 
@@ -346,7 +363,7 @@ mod tests {
 
         let token = token!();
         assert_eq!(
-            auth.validate(&token).await,
+            auth.validate(auth_req!(token)).await,
             bearer_auth_error!(BearerAuthError::InvalidToken)
         );
         assert_eq!(auth.keys.read().unwrap().len(), 1);
@@ -363,7 +380,7 @@ mod tests {
 
         let token = token!();
         assert_eq!(
-            auth.validate(&token).await,
+            auth.validate(auth_req!(token)).await,
             Ok(AuthContent {
                 sub: Some("Arthur".to_string()),
                 ..Default::default()
@@ -376,11 +393,11 @@ mod tests {
     async fn test_authorization_empty() {
         let auth = auth!();
         assert_eq!(
-            auth.validate("").await,
+            auth.validate(auth_req!("")).await,
             Err(AuthError::MissingAuthorizationParam)
         );
         assert_eq!(
-            auth.validate("   ").await,
+            auth.validate(auth_req!("   ")).await,
             Err(AuthError::MissingAuthorizationParam)
         );
     }
@@ -389,7 +406,8 @@ mod tests {
     async fn test_authorization_invalid_type() {
         let auth = auth!();
         assert_eq!(
-            auth.validate("Basic    YWxhZGRpbjpvcGVuc2VzYW1l").await,
+            auth.validate(auth_req!("Basic    YWxhZGRpbjpvcGVuc2VzYW1l"))
+                .await,
             Err(AuthError::InvalidAuthorizationType {
                 expected: "Bearer".into(),
                 current: "Basic".into(),
@@ -417,14 +435,20 @@ mod tests {
             json!({"typ": "JWT", "alg": "HS256", "kid": "test"}),
             json!({"sub": "Arthur"})
         );
-        assert_eq!(auth.validate(&token).await, Err(AuthError::AccessDenied));
+        assert_eq!(
+            auth.validate(auth_req!(token)).await,
+            Err(AuthError::AccessDenied)
+        );
 
         // Test bad roles
         let token = token!(
             json!({"typ": "JWT", "alg": "HS256", "kid": "test"}),
             json!({"sub": "Arthur", "roles": ["r2"]})
         );
-        assert_eq!(auth.validate(&token).await, Err(AuthError::AccessDenied));
+        assert_eq!(
+            auth.validate(auth_req!(token)).await,
+            Err(AuthError::AccessDenied)
+        );
 
         // Test valid token
         let token = token!(
@@ -432,7 +456,7 @@ mod tests {
             json!({"sub": "Arthur", "roles": ["r1"]})
         );
         assert_eq!(
-            auth.validate(&token).await,
+            auth.validate(auth_req!(token)).await,
             Ok(AuthContent {
                 sub: Some("Arthur".to_string()),
                 roles: Some(vec!["r1".to_string()]),
