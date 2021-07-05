@@ -421,6 +421,7 @@ mod tests {
             jwk_url: "https://login.microsoftonline.com/common/discovery/v2.0/keys".into(),
             constraints: AuthConstraint {
                 required_role: Some("r1".to_string()),
+                roles_contraint: None,
             },
         };
         let auth = auth!(config);
