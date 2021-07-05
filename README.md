@@ -1,6 +1,12 @@
 # OIDC auth server for project contour
 
-A really simple OIDC auth server to use with [Project Contour](https://projectcontour.io/).
+A really simple auth server to use with [Project Contour](https://projectcontour.io/).
+
+Project support various authorisation method
+
+- OIDC: project was made for this at first :wink:
+- htpasswd
+- IP allow / deny list
 
 ## Few more details
 
