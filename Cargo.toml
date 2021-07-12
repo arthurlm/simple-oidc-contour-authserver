@@ -5,13 +5,13 @@ authors = ["Arthur LE MOIGNE <me@alemoigne.fr>"]
 edition = "2018"
 
 [dependencies]
-tonic = { version = "0.4.3", features = ["tls"] }
-prost = "0.7.0"
-prost-types = "0.7.0"
-tokio = { version = "1.7.1", features = ["macros", "rt-multi-thread", "fs"] }
+tonic = { version = "0.5.0", features = ["tls"] }
+prost = "0.8.0"
+prost-types = "0.8.0"
+tokio = { version = "1.8.1", features = ["macros", "rt-multi-thread", "fs"] }
 env_logger = "0.8.4"
-anyhow = "1.0.41"
-thiserror = "1.0.25"
+anyhow = "1.0.42"
+thiserror = "1.0.26"
 async-trait = "0.1.50"
 log = "0.4.14"
 serde = { version = "1.0.126", features = ["derive"] }
@@ -20,14 +20,14 @@ envy = "0.4.2"
 jsonwebtoken = "7.2.0"
 reqwest = { version = "0.11.4", features = ["json"] }
 http = "0.2.4"
-structopt = "0.3.21"
+structopt = "0.3.22"
 futures = "0.3.15"
 jemallocator = "0.3.2"
 base64 = "0.13.0"
 htpasswd-verify = "0.1.0"
 
 [build-dependencies]
-tonic-build = "0.4.2"
+tonic-build = "0.5.0"
 
 [replace]
 "h2:0.3.3" = { git = "https://github.com/arthurlm/h2.git", rev = "4a53d191d2defc88f9dae85f4b25b921a064a429" }
