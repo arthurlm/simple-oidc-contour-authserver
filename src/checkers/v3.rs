@@ -32,10 +32,15 @@ fn extract_http_headers_authorization(check_request: &CheckRequest) -> Option<St
     let attributes = check_request.attributes.as_ref()?;
     let request = attributes.request.as_ref()?;
     let req_http = request.http.as_ref()?;
-    req_http
-        .headers
-        .get(http::header::AUTHORIZATION.as_str())
-        .cloned()
+
+    let expected_header = http::header::AUTHORIZATION.to_string().to_lowercase();
+    req_http.headers.iter().find_map(|(k, v)| {
+        if k.to_lowercase() == expected_header {
+            Some(v.to_string())
+        } else {
+            None
+        }
+    })
 }
 
 fn extract_source_ip_addr(check_request: &CheckRequest) -> Option<String> {
