@@ -84,8 +84,8 @@ enum BearerAuthError {
     #[error("invalid kid")]
     InvalidKid,
 
-    #[error("invalid JWT token")]
-    InvalidToken,
+    #[error("invalid JWT token: {0}")]
+    InvalidToken(String),
 }
 
 impl From<BearerAuthError> for AuthError {
@@ -201,20 +201,21 @@ impl AuthValidator for BearerAuth {
         // Get key from cache
         let keys = self.keys.read().unwrap();
         let key_info = keys.get(&kid).ok_or(BearerAuthError::InvalidKid)?;
-        let key = match key_info {
-            KeyInfo::RsaComponents { n, e } => DecodingKey::from_rsa_components(&n, &e),
-            #[cfg(test)]
-            KeyInfo::Secret(s) => DecodingKey::from_secret(s),
-        }
-        .map_err(|err| AuthError::PayloadValidationFail {
-            reason: err.to_string(),
-        })?;
+        let key =
+            match key_info {
+                KeyInfo::RsaComponents { n, e } => DecodingKey::from_rsa_components(&n, &e)
+                    .map_err(|err| AuthError::PayloadValidationFail {
+                        reason: err.to_string(),
+                    })?,
+                #[cfg(test)]
+                KeyInfo::Secret(s) => DecodingKey::from_secret(s),
+            };
 
         // Decode and check token
         let payload =
             jsonwebtoken::decode::<AuthContent>(token, &key, &self.validation).map_err(|e| {
                 log::warn!("Token validation failed: {:?}", e);
-                BearerAuthError::InvalidToken
+                BearerAuthError::InvalidToken(e.to_string())
             })?;
 
         payload.claims.is_authorized(&self.config.constraints)?;
@@ -252,10 +253,8 @@ mod tests {
             auth!(config)
         }};
         ($config:expr) => {{
-            let validation = Validation {
-                validate_exp: false,
-                ..Default::default()
-            };
+            let mut validation = Validation::default();
+            validation.validate_exp = false;
             BearerAuth::new($config, validation.into())
         }};
     }
@@ -273,7 +272,7 @@ mod tests {
         () => {
             token!(
                 json!({"typ": "JWT", "alg": "HS256", "kid": "test"}),
-                json!({"sub": "Arthur"})
+                json!({"sub": "Arthur", "exp": 1648381980})
             )
         };
         ($header:expr, $payload:expr) => {{
@@ -285,7 +284,7 @@ mod tests {
                 base64::encode(serde_json::to_string(&$payload).unwrap())
             );
             let key = EncodingKey::from_secret(TOKEN_SECRET);
-            let signature = sign(&message, &key, Algorithm::HS256).unwrap();
+            let signature = sign(message.as_bytes(), &key, Algorithm::HS256).unwrap();
 
             format!("Bearer   {}.{}", message, signature)
         }};
@@ -369,7 +368,9 @@ mod tests {
         let token = token!();
         assert_eq!(
             auth.validate(auth_req!(token)).await,
-            bearer_auth_error!(BearerAuthError::InvalidToken)
+            bearer_auth_error!(BearerAuthError::InvalidToken(
+                "InvalidSignature".to_string()
+            ))
         );
         assert_eq!(auth.keys.read().unwrap().len(), 1);
     }
@@ -439,7 +440,7 @@ mod tests {
         // Test missing roles
         let token = token!(
             json!({"typ": "JWT", "alg": "HS256", "kid": "test"}),
-            json!({"sub": "Arthur"})
+            json!({"sub": "Arthur", "exp": 1648381980})
         );
         assert_eq!(
             auth.validate(auth_req!(token)).await,
@@ -449,7 +450,7 @@ mod tests {
         // Test bad roles
         let token = token!(
             json!({"typ": "JWT", "alg": "HS256", "kid": "test"}),
-            json!({"sub": "Arthur", "roles": ["r2"]})
+            json!({"sub": "Arthur", "roles": ["r2"], "exp": 1648381980})
         );
         assert_eq!(
             auth.validate(auth_req!(token)).await,
@@ -459,7 +460,7 @@ mod tests {
         // Test valid token
         let token = token!(
             json!({"typ": "JWT", "alg": "HS256", "kid": "test"}),
-            json!({"sub": "Arthur", "roles": ["r1"]})
+            json!({"sub": "Arthur", "roles": ["r1"], "exp": 1648381980})
         );
         assert_eq!(
             auth.validate(auth_req!(token)).await,
