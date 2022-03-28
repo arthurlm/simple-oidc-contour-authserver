@@ -114,9 +114,11 @@ pub struct BearerAuth {
 #[derive(Debug, Deserialize)]
 struct JwkItem {
     kid: String,
-    kty: String,
     e: String,
     n: String,
+    // We do not read this field directly but wants to be sure it exists
+    #[allow(dead_code)]
+    kty: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -201,15 +203,17 @@ impl AuthValidator for BearerAuth {
         // Get key from cache
         let keys = self.keys.read().unwrap();
         let key_info = keys.get(&kid).ok_or(BearerAuthError::InvalidKid)?;
-        let key =
-            match key_info {
-                KeyInfo::RsaComponents { n, e } => DecodingKey::from_rsa_components(&n, &e)
-                    .map_err(|err| AuthError::PayloadValidationFail {
+        let key = match key_info {
+            KeyInfo::RsaComponents { n, e } => {
+                DecodingKey::from_rsa_components(n, e).map_err(|err| {
+                    AuthError::PayloadValidationFail {
                         reason: err.to_string(),
-                    })?,
-                #[cfg(test)]
-                KeyInfo::Secret(s) => DecodingKey::from_secret(s),
-            };
+                    }
+                })?
+            }
+            #[cfg(test)]
+            KeyInfo::Secret(s) => DecodingKey::from_secret(s),
+        };
 
         // Decode and check token
         let payload =
