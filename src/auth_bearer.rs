@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use jsonwebtoken::{Algorithm, DecodingKey, Validation};
 use serde::Deserialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::RwLock;
 use std::time::Duration;
 use thiserror::Error;
@@ -31,14 +31,16 @@ pub struct ValidationConfig {
 
 impl From<ValidationConfig> for Validation {
     fn from(config: ValidationConfig) -> Self {
-        let mut validation = Self {
-            leeway: config.leeway,
-            validate_exp: true,
-            validate_nbf: false,
-            iss: config.iss,
-            algorithms: vec![Algorithm::RS256],
-            ..Default::default()
-        };
+        let mut validation = Self::new(Algorithm::RS256);
+        validation.leeway = config.leeway;
+        validation.validate_exp = true;
+        validation.validate_nbf = false;
+
+        if let Some(value) = config.iss {
+            let mut iss = HashSet::new();
+            iss.insert(value);
+            validation.iss = Some(iss);
+        }
 
         if let Some(aud) = config.aud {
             validation.set_audience(&[aud]);
@@ -203,7 +205,10 @@ impl AuthValidator for BearerAuth {
             KeyInfo::RsaComponents { n, e } => DecodingKey::from_rsa_components(&n, &e),
             #[cfg(test)]
             KeyInfo::Secret(s) => DecodingKey::from_secret(s),
-        };
+        }
+        .map_err(|err| AuthError::PayloadValidationFail {
+            reason: err.to_string(),
+        })?;
 
         // Decode and check token
         let payload =
