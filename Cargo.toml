@@ -8,7 +8,7 @@ edition = "2018"
 tonic = { version = "0.6.2", features = ["tls"] }
 prost = "0.9.0"
 prost-types = "0.9.0"
-tokio = { version = "1.17.0", features = ["macros", "rt-multi-thread", "fs"] }
+tokio = { version = "1.18.4", features = ["macros", "rt-multi-thread", "fs"] }
 env_logger = "0.9.0"
 anyhow = "1.0.56"
 thiserror = "1.0.30"
