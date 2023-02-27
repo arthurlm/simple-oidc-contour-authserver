@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use base64::Engine;
 use thiserror::Error;
 
 use crate::authentication::*;
@@ -46,7 +47,8 @@ impl From<BasicAuthError> for AuthError {
 }
 
 fn payload_to_user_pass(payload_bin: &str) -> Result<AuthInfo, BasicAuthError> {
-    let payload_str = String::from_utf8(base64::decode(payload_bin)?)?;
+    let payload_str =
+        String::from_utf8(base64::engine::general_purpose::STANDARD.decode(payload_bin)?)?;
 
     let items: Vec<_> = payload_str.splitn(2, ':').collect();
 

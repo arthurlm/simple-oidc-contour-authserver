@@ -231,6 +231,7 @@ impl AuthValidator for BearerAuth {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use base64::Engine;
     use serde_json::json;
 
     static TOKEN_SECRET: &[u8] = &[4, 8, 15, 16, 23, 42];
@@ -284,8 +285,8 @@ mod tests {
 
             let message = format!(
                 "{}.{}",
-                base64::encode(serde_json::to_string(&$header).unwrap()),
-                base64::encode(serde_json::to_string(&$payload).unwrap())
+                base64::engine::general_purpose::STANDARD.encode(serde_json::to_string(&$header).unwrap()),
+                base64::engine::general_purpose::STANDARD.encode(serde_json::to_string(&$payload).unwrap())
             );
             let key = EncodingKey::from_secret(TOKEN_SECRET);
             let signature = sign(message.as_bytes(), &key, Algorithm::HS256).unwrap();
