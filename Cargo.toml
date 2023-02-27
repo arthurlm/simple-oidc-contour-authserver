@@ -22,7 +22,6 @@ reqwest = { version = "0.11.14", features = ["json", "rustls-tls"], default-feat
 http = "0.2.9"
 structopt = "0.3.26"
 futures = "0.3.26"
-jemallocator = "0.5.0"
 base64 = "0.21.0"
 htpasswd-verify = "0.2.1"
 
