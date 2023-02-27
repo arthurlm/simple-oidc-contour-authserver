@@ -1,17 +1,21 @@
-use async_trait::async_trait;
 use std::sync::Arc;
+
+use async_trait::async_trait;
+use http::{header, StatusCode};
 use tonic::{Request, Response, Status};
 
-use crate::envoy::api::v2::core::{address::Address, HeaderValue, HeaderValueOption};
-use crate::envoy::r#type::HttpStatus;
-use crate::envoy::service::auth::v2::authorization_server::Authorization;
-use crate::envoy::service::auth::v2::check_response::HttpResponse;
-use crate::envoy::service::auth::v2::{
-    CheckRequest, CheckResponse, DeniedHttpResponse, OkHttpResponse,
+use crate::{
+    authentication::*,
+    envoy::{
+        api::v2::core::{address::Address, HeaderValue, HeaderValueOption},
+        r#type::HttpStatus,
+        service::auth::v2::{
+            authorization_server::Authorization, check_response::HttpResponse, CheckRequest,
+            CheckResponse, DeniedHttpResponse, OkHttpResponse,
+        },
+    },
+    google::rpc,
 };
-use crate::google::rpc;
-
-use crate::authentication::*;
 
 fn build_http_header(key: &str, value: &str) -> HeaderValueOption {
     (key.to_string(), Some(value.to_string())).into()
@@ -33,7 +37,7 @@ fn extract_http_headers_authorization(check_request: &CheckRequest) -> Option<St
     let request = attributes.request.as_ref()?;
     let req_http = request.http.as_ref()?;
 
-    let expected_header = http::header::AUTHORIZATION.to_string().to_lowercase();
+    let expected_header = header::AUTHORIZATION.to_string().to_lowercase();
     req_http.headers.iter().find_map(|(k, v)| {
         if k.to_lowercase() == expected_header {
             Some(v.to_string())
@@ -108,10 +112,10 @@ where
             Err(e) => CheckResponse {
                 http_response: Some(HttpResponse::DeniedResponse(DeniedHttpResponse {
                     status: Some(HttpStatus {
-                        code: http::status::StatusCode::UNAUTHORIZED.as_u16() as i32,
+                        code: StatusCode::UNAUTHORIZED.as_u16() as i32,
                     }),
                     headers: vec![build_http_header(
-                        http::header::WWW_AUTHENTICATE.as_str(),
+                        header::WWW_AUTHENTICATE.as_str(),
                         T::AUTHENTICATION_SCHEME,
                     )],
                     body: format!("Error: {}", e),
