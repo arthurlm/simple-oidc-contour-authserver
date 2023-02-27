@@ -17,6 +17,10 @@ jobs:
       - uses: actions/checkout@v2
       - name: Checkout submodules
         run: git submodule update --init --recursive
+      - name: Install build depenencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes protobuf-compiler
       - name: Build
         run: cargo build
       - name: Run tests
