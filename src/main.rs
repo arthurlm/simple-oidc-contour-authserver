@@ -57,9 +57,9 @@ mod authentication;
 mod checkers;
 mod helpers;
 
-use futures::try_join;
 use std::{fs, sync::Arc, time::Duration};
 use structopt::StructOpt;
+use tokio::try_join;
 use tonic::transport::{Identity, Server, ServerTlsConfig};
 
 use crate::{

@@ -21,7 +21,6 @@ jsonwebtoken = "8.2.0"
 reqwest = { version = "0.11.14", features = ["json", "rustls-tls"], default-features = false }
 http = "0.2.9"
 structopt = "0.3.26"
-futures = "0.3.26"
 base64 = "0.21.0"
 htpasswd-verify = "0.2.1"
 
