@@ -1,6 +1,6 @@
 [package]
 name = "simple-oidc-contour-authserver"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Arthur LE MOIGNE <me@alemoigne.fr>"]
 edition = "2018"
 
