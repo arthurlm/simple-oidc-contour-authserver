@@ -54,7 +54,10 @@ mod auth_basic;
 mod auth_bearer;
 mod auth_ip;
 mod authentication;
-mod checkers;
+mod checkers {
+    pub mod v2;
+    pub mod v3;
+}
 mod helpers;
 
 use std::{fs, sync::Arc, time::Duration};
