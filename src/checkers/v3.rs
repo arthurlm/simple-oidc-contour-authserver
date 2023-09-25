@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use regex::Regex;
 use std::sync::Arc;
 use tonic::{Request, Response, Status};
 
@@ -28,6 +29,13 @@ impl From<AuthItem> for HeaderValueOption {
     }
 }
 
+fn extract_url_path(check_request: &CheckRequest) -> Option<&str> {
+    let attributes = check_request.attributes.as_ref()?;
+    let request = attributes.request.as_ref()?;
+    let req_http = request.http.as_ref()?;
+    Some(req_http.path.as_str())
+}
+
 fn extract_http_headers_authorization(check_request: &CheckRequest) -> Option<String> {
     let attributes = check_request.attributes.as_ref()?;
     let request = attributes.request.as_ref()?;
@@ -54,9 +62,20 @@ fn extract_source_ip_addr(check_request: &CheckRequest) -> Option<String> {
     }
 }
 
+fn is_request_filtered(check_request: &CheckRequest, regexp: &Option<Regex>) -> bool {
+    let Some(regexp) = regexp else {
+        return false;
+    };
+
+    match extract_url_path(check_request) {
+        Some(url_path) if regexp.is_match(url_path) => true,
+        _ => false,
+    }
+}
+
 async fn process_request<T>(
     validator: &Arc<T>,
-    check_request: CheckRequest,
+    check_request: &CheckRequest,
 ) -> Result<AuthContent, AuthError>
 where
     T: AuthValidator,
@@ -72,11 +91,15 @@ where
 #[derive(Debug)]
 pub struct AuthorizationV3<T> {
     validator: Arc<T>,
+    ignore_filter: Option<Regex>,
 }
 
 impl<T> AuthorizationV3<T> {
-    pub fn new(validator: Arc<T>) -> Self {
-        Self { validator }
+    pub fn new(validator: Arc<T>, ignore_filter: Option<Regex>) -> Self {
+        Self {
+            validator,
+            ignore_filter,
+        }
     }
 }
 
@@ -89,11 +112,22 @@ where
         &self,
         request: Request<CheckRequest>,
     ) -> Result<Response<CheckResponse>, Status> {
+        let request = request.into_inner();
         log::debug!("Processing v3 request: {:?}", request);
 
-        let response = process_request(&self.validator, request.into_inner()).await;
+        // Check if request is filtered out
+        if is_request_filtered(&request, &self.ignore_filter) {
+            return Ok(Response::new(CheckResponse {
+                http_response: Some(HttpResponse::OkResponse(OkHttpResponse::default())),
+                ..Default::default()
+            }));
+        }
+
+        // Otherwise try to authenticate user
+        let response = process_request(&self.validator, &request).await;
         log::info!("Auth v3 response: {:?}", response);
 
+        // Finally render response
         Ok(Response::new(match response {
             Ok(user_data) => CheckResponse {
                 http_response: Some(HttpResponse::OkResponse(OkHttpResponse {

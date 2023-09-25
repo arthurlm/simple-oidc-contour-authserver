@@ -60,6 +60,7 @@ mod checkers {
 }
 mod helpers;
 
+use regex::Regex;
 use std::{fs, sync::Arc, time::Duration};
 use structopt::StructOpt;
 use tokio::try_join;
@@ -98,6 +99,22 @@ struct Opts {
     /// Auth type to use
     #[structopt(subcommand)]
     auth_type: AuthType,
+
+    /// Regexp to ignore request checking based on URL path.
+    #[structopt(long)]
+    ignore_path_regexp: Option<String>,
+}
+
+impl Opts {
+    fn ignore_path_regexp(&self) -> Option<Regex> {
+        self.ignore_path_regexp.as_ref().and_then(|input| {
+            let output = Regex::new(input);
+            if output.is_err() {
+                log::warn!("Fail to compile ignore path regex: {output:?}");
+            }
+            output.ok()
+        })
+    }
 }
 
 #[derive(Debug, StructOpt)]
@@ -130,6 +147,7 @@ where
 {
     // Parse CLI addr
     let addr = opts.addr.parse()?;
+    let regexp = opts.ignore_path_regexp();
 
     // Read TLS data
     let (cert, key) = try_join!(
@@ -141,8 +159,8 @@ where
 
     // Init gRPC impl
     let svc = Arc::new(svc);
-    let auth_v2 = checkers::v2::AuthorizationV2::new(svc.clone());
-    let auth_v3 = checkers::v3::AuthorizationV3::new(svc);
+    let auth_v2 = checkers::v2::AuthorizationV2::new(svc.clone(), regexp.clone());
+    let auth_v3 = checkers::v3::AuthorizationV3::new(svc, regexp);
 
     log::info!("gRPC server will listen at: {:?}", addr);
     Server::builder()
