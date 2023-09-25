@@ -163,20 +163,20 @@ async fn main() -> anyhow::Result<()> {
     env_logger::init();
     let opts = Opts::from_args();
 
-    match opts.auth_type {
+    match &opts.auth_type {
         AuthType::Bearer => {
             let bearer_service = auth_bearer::BearerAuth::from_env()?;
             let _ = bearer_service.refresh_token().await;
 
             run_server(opts, bearer_service).await
         }
-        AuthType::Basic(ref param) => {
+        AuthType::Basic(param) => {
             let data = fs::read_to_string(&param.filename)?;
             let basic_svc = auth_basic::BasicAuth::new(&data);
 
             run_server(opts, basic_svc).await
         }
-        AuthType::IpAllowList(ref param) => {
+        AuthType::IpAllowList(param) => {
             let svc = auth_ip::IpAuth::from_file(&param.filename)?;
 
             run_server(opts, svc).await
