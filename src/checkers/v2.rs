@@ -71,10 +71,7 @@ fn is_request_filtered(check_request: &CheckRequest, regexp: &Option<Regex>) -> 
         return false;
     };
 
-    match extract_url_path(check_request) {
-        Some(url_path) if regexp.is_match(url_path) => true,
-        _ => false,
-    }
+    matches!(extract_url_path(check_request), Some(url_path) if regexp.is_match(url_path))
 }
 
 async fn process_request<T>(
@@ -85,8 +82,8 @@ where
     T: AuthValidator,
 {
     let request = AuthRequest {
-        authorization: extract_http_headers_authorization(&check_request),
-        source_ip_addr: extract_source_ip_addr(&check_request),
+        authorization: extract_http_headers_authorization(check_request),
+        source_ip_addr: extract_source_ip_addr(check_request),
     };
 
     validator.validate(request).await
