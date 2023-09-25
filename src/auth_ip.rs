@@ -10,7 +10,7 @@ use crate::authentication::*;
 pub struct IpAuthEntry {
     /// Ip to allow.
     ///
-    /// Possible improvment: use socket object instead.
+    /// Possible improvement: use socket object instead.
     ip: String,
 
     /// information associated with this IP.

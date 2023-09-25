@@ -53,7 +53,7 @@ impl From<ValidationConfig> for Validation {
 #[derive(Debug, Deserialize)]
 pub struct BearerAuthConfig {
     /// JWK url to get public key
-    /// Exemple: https://login.microsoftonline.com/common/discovery/v2.0/keys
+    /// Example: https://login.microsoftonline.com/common/discovery/v2.0/keys
     /// You can easily found this in '.well-known' configs
     jwk_url: String,
 
@@ -122,7 +122,7 @@ struct JwkItem {
 }
 
 #[derive(Debug, Deserialize)]
-struct JwkEnveloppe {
+struct JwkEnvelope {
     keys: Vec<JwkItem>,
 }
 
@@ -161,7 +161,7 @@ impl BearerAuth {
 
     pub async fn refresh_token(&self) -> reqwest::Result<()> {
         log::info!("Refreshing token");
-        let enveloppe: JwkEnveloppe = self
+        let envelope: JwkEnvelope = self
             .client
             .get(&self.config.jwk_url)
             .timeout(KEY_REQUEST_TIMEOUT)
@@ -171,7 +171,7 @@ impl BearerAuth {
             .await?;
 
         let mut keys = self.keys.write().unwrap();
-        for key in enveloppe.keys {
+        for key in envelope.keys {
             keys.insert(key.kid.clone(), key.into());
         }
 
@@ -432,7 +432,7 @@ mod tests {
             jwk_url: "https://login.microsoftonline.com/common/discovery/v2.0/keys".into(),
             constraints: AuthConstraint {
                 required_role: Some("r1".to_string()),
-                roles_contraint: None,
+                roles_constraint: None,
             },
         };
         let auth = auth!(config);

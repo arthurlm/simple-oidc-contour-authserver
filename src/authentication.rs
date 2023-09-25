@@ -76,7 +76,7 @@ impl AuthContent {
             };
         }
 
-        if let Some(roles_contraint) = &auth_constraint.roles_contraint {
+        if let Some(roles_constraint) = &auth_constraint.roles_constraint {
             let user_roles: HashSet<String> = self
                 .roles
                 .clone()
@@ -84,11 +84,11 @@ impl AuthContent {
                 .into_iter()
                 .collect();
 
-            let allowed = roles_contraint.allowed();
-            let forbiden = roles_contraint.forbiden();
+            let allowed = roles_constraint.allowed();
+            let forbidden = roles_constraint.forbidden();
 
-            // Check for forbiden
-            if !(&user_roles & &forbiden).is_empty() {
+            // Check for forbidden
+            if !(&user_roles & &forbidden).is_empty() {
                 return Err(AuthError::AccessDenied);
             }
 
@@ -108,7 +108,7 @@ pub struct AuthRolesConstraint {
     allowed: Vec<String>,
 
     /// If user has one of this roles, then it is rejected
-    forbiden: Vec<String>,
+    forbidden: Vec<String>,
 }
 
 impl AuthRolesConstraint {
@@ -116,8 +116,8 @@ impl AuthRolesConstraint {
         self.allowed.clone().into_iter().collect()
     }
 
-    pub fn forbiden(&self) -> HashSet<String> {
-        self.forbiden.clone().into_iter().collect()
+    pub fn forbidden(&self) -> HashSet<String> {
+        self.forbidden.clone().into_iter().collect()
     }
 }
 
@@ -129,7 +129,7 @@ pub struct AuthConstraint {
 
     /// Advanced roles configuration
     #[serde(default)]
-    pub roles_contraint: Option<AuthRolesConstraint>,
+    pub roles_constraint: Option<AuthRolesConstraint>,
 }
 
 /// Represent standardized information about user request.
@@ -215,7 +215,7 @@ mod tests {
     fn test_auth_no_requirement() {
         let constraint = AuthConstraint {
             required_role: None,
-            roles_contraint: None,
+            roles_constraint: None,
         };
 
         let content = AuthContent::default();
@@ -229,7 +229,7 @@ mod tests {
     fn test_auth_role_required() {
         let constraint = AuthConstraint {
             required_role: Some("r1".to_string()),
-            roles_contraint: None,
+            roles_constraint: None,
         };
 
         // No roles
@@ -251,12 +251,12 @@ mod tests {
         assert_eq!(content.is_authorized(&constraint), Ok(()));
     }
 
-    fn advanced_config(allowed: &[&str], forbiden: &[&str]) -> AuthConstraint {
+    fn advanced_config(allowed: &[&str], forbidden: &[&str]) -> AuthConstraint {
         AuthConstraint {
             required_role: None,
-            roles_contraint: Some(AuthRolesConstraint {
+            roles_constraint: Some(AuthRolesConstraint {
                 allowed: allowed.iter().map(|x| x.to_string()).collect(),
-                forbiden: forbiden.iter().map(|x| x.to_string()).collect(),
+                forbidden: forbidden.iter().map(|x| x.to_string()).collect(),
             }),
         }
     }
@@ -288,7 +288,7 @@ mod tests {
         assert_allowed!(auth_content(&["a1", "a2"]).is_authorized(&config));
         assert_allowed!(auth_content(&["a2", "a3"]).is_authorized(&config));
 
-        // Check for forbiden config
+        // Check for forbidden config
         let config = advanced_config(&[], &["f1", "f3"]);
         assert_allowed!(auth_content(&[]).is_authorized(&config));
         assert_allowed!(auth_content(&["f2"]).is_authorized(&config));
@@ -300,7 +300,7 @@ mod tests {
         let config = advanced_config(&["a1", "a3"], &["f1", "f3"]);
         assert_allowed!(auth_content(&["a1", "f2"]).is_authorized(&config));
 
-        assert_deny!(auth_content(&["a1", "f1"]).is_authorized(&config)); // Has forbiden
-        assert_deny!(auth_content(&["a2", "f2"]).is_authorized(&config)); // Misisng allowed
+        assert_deny!(auth_content(&["a1", "f1"]).is_authorized(&config)); // Has forbidden
+        assert_deny!(auth_content(&["a2", "f2"]).is_authorized(&config)); // Missing allowed
     }
 }
