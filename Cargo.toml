@@ -5,27 +5,30 @@ authors = ["Arthur LE MOIGNE <me@alemoigne.fr>"]
 edition = "2018"
 
 [dependencies]
-tonic = { version = "0.8.3", features = ["tls"] }
-prost = "0.11.8"
-prost-types = "0.11.8"
-tokio = { version = "1.25.0", features = ["macros", "rt-multi-thread", "fs"] }
+tonic = { version = "0.10.1", features = ["tls"] }
+prost = "0.12.1"
+prost-types = "0.12.1"
+tokio = { version = "1.32.0", features = ["macros", "rt-multi-thread", "fs"] }
 env_logger = "0.10.0"
-anyhow = "1.0.69"
-thiserror = "1.0.38"
-async-trait = "0.1.64"
-log = "0.4.17"
-serde = { version = "1.0.152", features = ["derive"] }
-serde_json = "1.0.93"
+anyhow = "1.0.75"
+thiserror = "1.0.48"
+async-trait = "0.1.73"
+log = "0.4.20"
+serde = { version = "1.0.188", features = ["derive"] }
+serde_json = "1.0.107"
 envy = "0.4.2"
-jsonwebtoken = "8.2.0"
-reqwest = { version = "0.11.14", features = ["json", "rustls-tls"], default-features = false }
+jsonwebtoken = "8.3.0"
+reqwest = { version = "0.11.20", features = [
+    "json",
+    "rustls-tls",
+], default-features = false }
 http = "0.2.9"
 structopt = "0.3.26"
-base64 = "0.21.0"
-htpasswd-verify = "0.2.1"
+base64 = "0.21.4"
+htpasswd-verify = "0.3.0"
 
 [build-dependencies]
-tonic-build = "0.8.4"
+tonic-build = "0.10.1"
 
 [replace]
-"h2:0.3.12" = { git = "https://github.com/arthurlm/h2.git", rev = "b2e7b915d875f25c49f895b6a072b422d81502ff" }
+"h2:0.3.21" = { git = "https://github.com/arthurlm/h2.git", rev = "7820c42ca36699d0004f0f173300244beddd0094" }

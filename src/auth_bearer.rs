@@ -285,8 +285,8 @@ mod tests {
 
             let message = format!(
                 "{}.{}",
-                base64::engine::general_purpose::STANDARD.encode(serde_json::to_string(&$header).unwrap()),
-                base64::engine::general_purpose::STANDARD.encode(serde_json::to_string(&$payload).unwrap())
+                base64::engine::general_purpose::STANDARD_NO_PAD.encode(serde_json::to_string(&$header).unwrap()),
+                base64::engine::general_purpose::STANDARD_NO_PAD.encode(serde_json::to_string(&$payload).unwrap())
             );
             let key = EncodingKey::from_secret(TOKEN_SECRET);
             let signature = sign(message.as_bytes(), &key, Algorithm::HS256).unwrap();

@@ -72,7 +72,7 @@ impl AuthValidator for BasicAuth {
         let payload = read_auth_param(Self::AUTHENTICATION_SCHEME, &authorization)?;
         let auth_info = payload_to_user_pass(payload)?;
 
-        let htpasswd = htpasswd_verify::load(&self.htpasswd_config);
+        let htpasswd = htpasswd_verify::Htpasswd::new_borrowed(&self.htpasswd_config);
         if htpasswd.check(&auth_info.username, &auth_info.password) {
             Ok(AuthContent {
                 sub: Some(auth_info.username),
