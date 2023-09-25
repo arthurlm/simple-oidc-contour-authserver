@@ -26,6 +26,7 @@ http = "0.2.9"
 structopt = "0.3.26"
 base64 = "0.21.4"
 htpasswd-verify = "0.3.0"
+regex = "1.9.5"
 
 [build-dependencies]
 tonic-build = "0.10.1"
